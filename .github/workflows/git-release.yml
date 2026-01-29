@@ -1,0 +1,82 @@
+name: Bump version & release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semver type of new version (major / minor / patch)'
+        required: true
+        type: choice
+        options: 
+        - patch
+        - minor
+        - major
+
+jobs:  
+  bump-version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tags.outputs.tag }}
+
+    steps:
+      
+      - name: Check out source
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PUBLISH_TOKEN }}
+        
+      - name: Cache Cargo bin directory
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin
+          key: cargo-bin-${{ runner.os }}
+                     
+
+      - name: Install cargo-edit util
+        run: |
+          if [ ! -f ~/.cargo/bin/cargo-set-version ]; then
+            cargo install cargo-edit 
+          fi
+  
+      - name: Setup Git
+        run: |
+          git config user.name 'nerjs'
+          git config user.email 'nerjs.stap@gmail.com'
+  
+      - name: bump version
+        run: cargo set-version --bump ${{ github.event.inputs.version }}
+        
+      - name: commit changes
+        run: git add . && git commit -m "Bump version"
+      
+      - name: Build tag
+        id: tags
+        run: |
+          TAG="v$(cargo pkgid | cut -d "#" -f2)"
+          echo "Current tag: $TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+      
+      - name: Create git tag
+        run: git tag -a "${{ steps.tags.outputs.tag }}" -m "${{ steps.tags.outputs.tag }}"
+        
+      - name: Push latest version
+        run: git push origin master --follow-tags
+        
+        
+  create-github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: bump-version
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.bump-version.outputs.tag }}
+          fetch-tags: true
+        
+      - name: Create Release
+        run: gh release create ${{ needs.bump-version.outputs.tag }} --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}

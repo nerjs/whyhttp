@@ -1,0 +1,155 @@
+name: "CI: tests, linter and build"
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+      
+jobs:
+  check-fmt:
+    runs-on: ubuntu-latest
+
+    steps:
+          
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Cache Cargo bin directory
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin
+          key: cargo-bin-${{ runner.os }}
+
+      - name: Check Rust formatting
+        run: cargo fmt --all --check
+
+  check-clippy:
+    runs-on: ubuntu-latest
+
+    steps:
+          
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Cache Cargo bin directory
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin
+          key: cargo-bin-${{ runner.os }}
+            
+      - name: Cache Cargo target directory
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-debug-clippy-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-debug-clippy-
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+  cargo-check:
+    runs-on: ubuntu-latest
+    needs: [check-fmt, check-clippy]
+
+    steps:
+          
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Cache Cargo bin directory
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin
+          key: cargo-bin-${{ runner.os }}
+            
+      - name: Cache Cargo target directory
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-check-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-check-
+
+      - name: Check Rust errors
+        run: RUSTFLAGS="-D warnings" cargo check --all-targets --all-features
+        # run: cargo check --all-targets --all-features
+        
+  tests:
+    runs-on: ubuntu-latest
+    needs: [check-fmt, check-clippy]
+
+    steps:
+          
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Cache Cargo bin directory
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin
+          key: cargo-bin-${{ runner.os }}
+            
+      - name: Cache Cargo target directory
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-tests-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-tests-
+
+      - name: tests
+        run: cargo test --workspace
+
+  build-debug:
+    runs-on: ubuntu-latest
+    needs: [cargo-check, tests]
+
+    steps:
+          
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Cache Cargo bin directory
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin
+          key: cargo-bin-${{ runner.os }}
+            
+      - name: Cache Cargo target directory
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-debug-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-debug-build-
+
+      - name: debug build
+        run: cargo build
+
+  build-release:
+    runs-on: ubuntu-latest
+    needs: build-debug
+
+    steps:
+          
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Cache Cargo bin directory
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin
+          key: cargo-bin-${{ runner.os }}
+            
+      - name: Cache Cargo target directory
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-release-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-release-build-
+
+      - name: build release
+        run: cargo build --release
+

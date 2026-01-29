@@ -1,0 +1,37 @@
+name: "SYNC: dependencies with master"
+
+on:
+  push:
+    branches:
+      - master
+      
+
+permissions:
+  contents: write
+  pull-requests: write
+      
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PUBLISH_TOKEN }}
+          ref: master
+
+      - name: Create PR main -> dependencies
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.PUBLISH_TOKEN }}
+          base: master
+          branch: dependencies
+          title: Sync dependencies with master
+          body: |
+            Automated sync: merge master into dependencies.
+            If conflicts exist, resolve them in this PR.
+          commit-message: "chore(sync): merge master into dependencies"
+          labels: sync
+          delete-branch: false
+          draft: false
