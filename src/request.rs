@@ -1,8 +1,8 @@
-#![allow(unused)]
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Request {
+    pub method: String,
     pub path: String,
     pub query: HashMap<String, Option<String>>,
     pub fragment: Option<String>,
@@ -10,9 +10,70 @@ pub struct Request {
     pub body: Option<String>,
 }
 
+impl Request {
+    pub fn set_path<S: Into<String>>(&mut self, path: S) {
+        self.path = path.into();
+    }
+
+    pub fn set_method<S: Into<String>>(&mut self, method: S) {
+        self.method = method.into();
+    }
+
+    pub fn set_fragment<S: Into<String>>(&mut self, fragment: S) {
+        self.fragment = Some(fragment.into());
+    }
+
+    pub fn set_body<S: Into<String>>(&mut self, body: S) {
+        self.body = Some(body.into());
+    }
+
+    pub fn set_query<K: Into<String>, V: Into<String>>(&mut self, key: K, value: Option<V>) {
+        self.query.insert(key.into(), value.map(|s| s.into()));
+    }
+
+    pub fn set_header<K: Into<String>, V: Into<String>>(&mut self, key: K, value: V) {
+        self.headers.insert(key.into(), value.into());
+    }
+
+    pub fn with_path<S: Into<String>>(mut self, path: S) -> Self {
+        self.set_path(path);
+        self
+    }
+
+    pub fn with_method<S: Into<String>>(mut self, method: S) -> Self {
+        self.set_method(method);
+        self
+    }
+
+    pub fn with_fragment<S: Into<String>>(mut self, fragment: S) -> Self {
+        self.set_fragment(fragment);
+        self
+    }
+
+    pub fn with_body<S: Into<String>>(mut self, body: S) -> Self {
+        self.set_body(body);
+        self
+    }
+
+    pub fn with_query<K: Into<String>, V: Into<String>>(
+        mut self,
+        key: K,
+        value: Option<V>,
+    ) -> Self {
+        self.set_query(key, value);
+        self
+    }
+
+    pub fn with_header<K: Into<String>, V: Into<String>>(mut self, key: K, value: V) -> Self {
+        self.set_header(key, value);
+        self
+    }
+}
+
 impl Default for Request {
     fn default() -> Self {
         Self {
+            method: String::from("GET"),
             path: String::from("/"),
             query: Default::default(),
             fragment: Default::default(),
@@ -47,6 +108,55 @@ impl From<&str> for Request {
         }
 
         request
+    }
+}
+
+impl std::fmt::Display for Request {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("[{} {}", self.method.to_uppercase(), self.path));
+
+        if !self.query.is_empty() {
+            f.write_str("?");
+            let query = self
+                .query
+                .iter()
+                .map(|(k, v)| {
+                    if let Some(v) = v {
+                        format!("{}={}", k, v)
+                    } else {
+                        k.to_string()
+                    }
+                })
+                .collect::<Vec<String>>()
+                .join("&");
+            f.write_str(&query);
+        }
+
+        if let Some(fragment) = &self.fragment {
+            f.write_str(&format!("#{fragment}"));
+        }
+
+        if !self.headers.is_empty() {
+            f.write_str(" | with headers {");
+
+            let headers = self
+                .headers
+                .iter()
+                .map(|(k, v)| format!("{k:?} = {v:?}"))
+                .collect::<Vec<String>>()
+                .join(", ");
+            f.write_str(&headers);
+
+            f.write_str("}");
+        }
+
+        if let Some(body) = &self.body {
+            f.write_str(&format!(" | with body {body:?}"));
+        }
+
+        f.write_str("]");
+
+        Ok(())
     }
 }
 
