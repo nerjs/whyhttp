@@ -19,46 +19,55 @@ pub enum Matcher {
 impl Matcher {
     pub fn validate(&self, request: &Request) -> Option<Matcher> {
         match self {
-            Matcher::Method(expected) if request.method.to_uppercase() != expected.to_uppercase() => 
-                    Some(Matcher::Method(request.method.clone())),
-               
-            Matcher::Path(expected) if &request.path != expected => Some(Matcher::Path(request.path.clone())),
-            Matcher::QueryEq(key, expected_val) => {
-                match request.query.get(key) {
-                    Some(Some(actual_val)) if actual_val == expected_val => None,
-                    Some(Some(actual_val)) => Some(Matcher::QueryEq(key.clone(), actual_val.clone())),
-                    Some(None) => Some(Matcher::QueryExists(key.clone())),
-                    None => Some(Matcher::QueryMiss(key.clone())),
-                }
+            Matcher::Method(expected)
+                if request.method.to_uppercase() != expected.to_uppercase() =>
+            {
+                Some(Matcher::Method(request.method.clone()))
             }
-            Matcher::QueryExists(key) if !request.query.contains_key(key) => Some(Matcher::QueryMiss(key.clone())),
-            Matcher::QueryMiss(key) if request.query.contains_key(key) => Some(Matcher::QueryExists(key.clone())),
-            Matcher::HeaderEq(key, expected_val) => {
-                match request.headers.get(key) {
-                    Some(actual_val) if actual_val == expected_val => None,
-                    Some(actual_val) => Some(Matcher::HeaderEq(key.clone(), actual_val.clone())),
-                    None => Some(Matcher::HeaderMiss(key.clone())),
-                }
+
+            Matcher::Path(expected) if &request.path != expected => {
+                Some(Matcher::Path(request.path.clone()))
             }
-            Matcher::HeaderExists(key) if !request.headers.contains_key(key) =>  Some(Matcher::HeaderMiss(key.clone())),
-            Matcher::HeaderMiss(key) if request.headers.contains_key(key) => Some(Matcher::HeaderExists(key.clone())),
-            Matcher::FragmentEq(expected) => {
-                match &request.fragment {
-                    Some(actual) if actual == expected => None,
-                    Some(actual) => Some(Matcher::FragmentEq(actual.clone())),
-                    None => Some(Matcher::FragmentMiss),
-                }
+            Matcher::QueryEq(key, expected_val) => match request.query.get(key) {
+                Some(Some(actual_val)) if actual_val == expected_val => None,
+                Some(Some(actual_val)) => Some(Matcher::QueryEq(key.clone(), actual_val.clone())),
+                Some(None) => Some(Matcher::QueryExists(key.clone())),
+                None => Some(Matcher::QueryMiss(key.clone())),
+            },
+            Matcher::QueryExists(key) if !request.query.contains_key(key) => {
+                Some(Matcher::QueryMiss(key.clone()))
             }
-            Matcher::FragmentMiss if request.fragment.is_some() => Some(Matcher::FragmentEq(request.fragment.clone().unwrap())),
-            Matcher::BodyEq(expected) => {
-                match &request.body {
-                    Some(actual) if actual == expected => None,
-                    Some(actual) => Some(Matcher::BodyEq(actual.clone())),
-                    None => Some(Matcher::BodyMiss),
-                }
+            Matcher::QueryMiss(key) if request.query.contains_key(key) => {
+                Some(Matcher::QueryExists(key.clone()))
             }
-            Matcher::BodyMiss if request.body.is_some() => Some(Matcher::BodyEq(request.body.clone().unwrap())),
-            _ => None
+            Matcher::HeaderEq(key, expected_val) => match request.headers.get(key) {
+                Some(actual_val) if actual_val == expected_val => None,
+                Some(actual_val) => Some(Matcher::HeaderEq(key.clone(), actual_val.clone())),
+                None => Some(Matcher::HeaderMiss(key.clone())),
+            },
+            Matcher::HeaderExists(key) if !request.headers.contains_key(key) => {
+                Some(Matcher::HeaderMiss(key.clone()))
+            }
+            Matcher::HeaderMiss(key) if request.headers.contains_key(key) => {
+                Some(Matcher::HeaderExists(key.clone()))
+            }
+            Matcher::FragmentEq(expected) => match &request.fragment {
+                Some(actual) if actual == expected => None,
+                Some(actual) => Some(Matcher::FragmentEq(actual.clone())),
+                None => Some(Matcher::FragmentMiss),
+            },
+            Matcher::FragmentMiss if request.fragment.is_some() => {
+                Some(Matcher::FragmentEq(request.fragment.clone().unwrap()))
+            }
+            Matcher::BodyEq(expected) => match &request.body {
+                Some(actual) if actual == expected => None,
+                Some(actual) => Some(Matcher::BodyEq(actual.clone())),
+                None => Some(Matcher::BodyMiss),
+            },
+            Matcher::BodyMiss if request.body.is_some() => {
+                Some(Matcher::BodyEq(request.body.clone().unwrap()))
+            }
+            _ => None,
         }
     }
 }
@@ -71,15 +80,18 @@ impl Matchers {
     pub fn add(&mut self, matcher: Matcher) {}
 
     pub fn is_matched(&self, request: &Request) -> bool {
-        self.inner.iter().all(|matcher| matcher.validate(request).is_none())
+        self.inner
+            .iter()
+            .all(|matcher| matcher.validate(request).is_none())
     }
 
     pub fn validate(&self, request: &Request) -> Option<Vec<Matcher>> {
-        let errors: Vec<Matcher> = self.inner
+        let errors: Vec<Matcher> = self
+            .inner
             .iter()
             .filter_map(|matcher| matcher.validate(request))
             .collect();
-        
+
         if errors.is_empty() {
             None
         } else {
@@ -179,17 +191,20 @@ mod test {
     ) {
         let report = invalid_matcher.validate(&request);
         assert_eq!(
-            report, 
+            report,
             Some(valid_matcher.clone()),
             "Invalid matcher {:?} should report expected correction {:?} for request: {}",
-            invalid_matcher, valid_matcher, request
+            invalid_matcher,
+            valid_matcher,
+            request
         );
 
         let result = valid_matcher.validate(&request);
         assert!(
             result.is_none(),
             "Valid matcher {:?} should pass validation (return None) for request: {}",
-            valid_matcher, request
+            valid_matcher,
+            request
         );
     }
 
@@ -217,14 +232,16 @@ mod test {
         assert!(
             matchers.is_matched(&request),
             "Matchers {:?} should successfully match request: {}",
-            matchers.inner, request
+            matchers.inner,
+            request
         );
 
         let result = matchers.validate(&request);
         assert!(
             result.is_none(),
             "Matchers {:?} should validate successfully (return None) for request: {}",
-            matchers.inner, request
+            matchers.inner,
+            request
         )
     }
 
@@ -257,15 +274,19 @@ mod test {
         assert!(
             !matchers.is_matched(&request),
             "Matchers {:?} should NOT match request: {}",
-            matchers.inner, request
+            matchers.inner,
+            request
         );
 
         let result = matchers.validate(&request);
         assert_eq!(
-            result, 
+            result,
             Some(expected_reports.clone()),
             "Matchers {:?} should report errors {:?} for request: {}\nActual result: {:?}",
-            matchers.inner, expected_reports, request, result
+            matchers.inner,
+            expected_reports,
+            request,
+            result
         );
     }
 }
