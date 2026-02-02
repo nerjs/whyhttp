@@ -1,5 +1,9 @@
 use crate::request::Request;
 
+/// A single request matching rule.
+///
+/// Represents an expectation about one request attribute
+/// (method, path, query, header, fragment or body).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Matcher {
     Method(String),
@@ -19,9 +23,8 @@ pub enum Matcher {
 impl Matcher {
     pub fn validate(&self, request: &Request) -> Option<Matcher> {
         match self {
-            Matcher::Method(expected)
-                if request.method.to_uppercase() != expected.to_uppercase() =>
-            {
+            // eq_ignore_ascii_case: ASCII-only case-insensitive string comparison (no allocations).
+            Matcher::Method(expected) if !request.method.eq_ignore_ascii_case(expected) => {
                 Some(Matcher::Method(request.method.clone()))
             }
 
@@ -56,46 +59,81 @@ impl Matcher {
                 Some(actual) => Some(Matcher::FragmentEq(actual.clone())),
                 None => Some(Matcher::FragmentMiss),
             },
-            Matcher::FragmentMiss if request.fragment.is_some() => {
-                Some(Matcher::FragmentEq(request.fragment.clone().unwrap()))
-            }
+
+            // NOTE: once `if_let_guard` is stabilized, this can be rewritten as a match guard:
+            // `Matcher::FragmentMiss if let Some(actual) = &request.fragment => ...`
+            // Tracking issue: https://github.com/rust-lang/rust/issues/51114
+            Matcher::FragmentMiss => request
+                .fragment
+                .as_ref()
+                .map(|actual| Matcher::FragmentEq(actual.clone())),
+
             Matcher::BodyEq(expected) => match &request.body {
                 Some(actual) if actual == expected => None,
                 Some(actual) => Some(Matcher::BodyEq(actual.clone())),
                 None => Some(Matcher::BodyMiss),
             },
-            Matcher::BodyMiss if request.body.is_some() => {
-                Some(Matcher::BodyEq(request.body.clone().unwrap()))
-            }
+
+            // NOTE: once `if_let_guard` is stabilized, this can be rewritten as a match guard:
+            // `Matcher::BodyMiss if let Some(actual) = &request.body => ...`
+            // Tracking issue: https://github.com/rust-lang/rust/issues/51114
+            Matcher::BodyMiss => request
+                .body
+                .as_ref()
+                .map(|actual| Matcher::BodyEq(actual.clone())),
             _ => None,
         }
     }
 }
 
+/// An ordered collection of matchers.
+///
+/// Insertion order is preserved and used when generating reports.
+#[derive(Default)]
 pub struct Matchers {
+    // Insertion order is preserved (used for deterministic reporting).
     inner: Vec<Matcher>,
 }
 
-impl Matchers {
-    pub fn add(&mut self, matcher: Matcher) {}
+/// Describes a single mismatch.
+///
+/// `expected` — original rule  
+/// `actual`   — value observed in the request
+#[derive(Debug, PartialEq)]
+pub struct Report {
+    pub expected: Matcher,
+    pub actual: Matcher,
+}
 
-    pub fn is_matched(&self, request: &Request) -> bool {
+impl Matchers {
+    pub fn add(&mut self, matcher: Matcher) {
+        if !self.inner.contains(&matcher) {
+            self.inner.push(matcher);
+        }
+    }
+
+    pub fn accepts(&self, request: &Request) -> bool {
         self.inner
             .iter()
             .all(|matcher| matcher.validate(request).is_none())
     }
 
-    pub fn validate(&self, request: &Request) -> Option<Vec<Matcher>> {
-        let errors: Vec<Matcher> = self
+    pub fn validate(&self, request: &Request) -> Option<Vec<Report>> {
+        let reports: Vec<Report> = self
             .inner
             .iter()
-            .filter_map(|matcher| matcher.validate(request))
+            .filter_map(|matcher| {
+                matcher.validate(request).map(|actual| Report {
+                    expected: matcher.clone(),
+                    actual,
+                })
+            })
             .collect();
 
-        if errors.is_empty() {
+        if reports.is_empty() {
             None
         } else {
-            Some(errors)
+            Some(reports)
         }
     }
 }
@@ -208,6 +246,36 @@ mod test {
         );
     }
 
+    #[rstest]
+    #[case::upper_lower(method("GET"), "get")]
+    #[case::lower_mixed(method("post"), "PoSt")]
+    #[case::mixed_upper(method("pUt"), "PUT")]
+    fn method_case_insensitive(#[case] matcher: Matcher, #[case] req_method: &str) {
+        let req = Request::default().with_method(req_method);
+
+        assert!(
+            matcher.validate(&req).is_none(),
+            "Method matcher should be case-insensitive. Matcher: {:?}, request.method: {:?}",
+            matcher,
+            req.method
+        );
+    }
+
+    #[rstest]
+    #[case::simple(method("GET"), "POST")]
+    #[case::preserve_case(method("get"), "pOsT")]
+    fn method_reports_actual(#[case] matcher: Matcher, #[case] req_method: &str) {
+        let req = Request::default().with_method(req_method);
+
+        assert_eq!(
+            matcher.validate(&req),
+            Some(method(req_method)),
+            "On mismatch, Method matcher should report actual request.method verbatim. Matcher: {:?}, request.method: {:?}",
+            matcher,
+            req.method
+        );
+    }
+
     #[rstest::rstest]
     #[case::empty(&[], Request::default())]
     #[case::method(&[method("GET")], Request::default())]
@@ -230,7 +298,7 @@ mod test {
         };
 
         assert!(
-            matchers.is_matched(&request),
+            matchers.accepts(&request),
             "Matchers {:?} should successfully match request: {}",
             matchers.inner,
             request
@@ -262,31 +330,75 @@ mod test {
     #[case::mixed(&[method("GET"), path("/correct"), q_eq("key", "wrong")], &[q_eq("key", "right")], Request::from("/correct?key=right").with_method("GET"))]
     #[case::mixed(&[method("POST"), path("/api"), q_ex("token")], &[method("GET"), path("/"), q_miss("token")], Request::default())]
     fn invalid_matchers(
-        #[case] inner: &[Matcher],
-        #[case] reports: &[Matcher],
+        #[case] expected: &[Matcher],
+        #[case] actual: &[Matcher],
         #[case] request: Request,
     ) {
         let matchers = Matchers {
-            inner: inner.into_iter().map(|m| m.clone()).collect(),
+            inner: expected.to_vec(),
         };
-        let expected_reports: Vec<Matcher> = reports.into_iter().map(|m| m.clone()).collect();
+        let actual = actual.to_vec();
 
         assert!(
-            !matchers.is_matched(&request),
+            !matchers.accepts(&request),
             "Matchers {:?} should NOT match request: {}",
             matchers.inner,
             request
         );
 
-        let result = matchers.validate(&request);
+        let validated_actual: Vec<Matcher> = matchers
+            .validate(&request)
+            .unwrap()
+            .into_iter()
+            .map(|Report { actual, .. }| actual)
+            .collect();
         assert_eq!(
-            result,
-            Some(expected_reports.clone()),
-            "Matchers {:?} should report errors {:?} for request: {}\nActual result: {:?}",
-            matchers.inner,
-            expected_reports,
-            request,
-            result
+            validated_actual, actual,
+            "Matchers {:?} should report errors {:?} for request: {}",
+            matchers.inner, actual, request
+        );
+    }
+
+    #[test]
+    fn validate_tracks_added_matchers_in_order() {
+        let request = Request::from("/some/path").with_method("post");
+        let mut matchers = Matchers::default();
+
+        // Case: no matchers -> no reports.
+        let reports = matchers.validate(&request);
+        assert!(
+            reports.is_none(),
+            "No matchers: validate should return None"
+        );
+
+        // Case: add path matcher -> one report (path mismatch).
+        matchers.add(path("/other/path"));
+        let reports = matchers.validate(&request);
+        assert_eq!(
+            reports,
+            Some(vec![Report {
+                expected: path("/other/path"),
+                actual: path("/some/path"),
+            }]),
+            "After adding path matcher: should report path mismatch (expected vs actual)"
+        );
+
+        // Case: add method matcher -> two reports (path mismatch first, then method mismatch).
+        matchers.add(method("PUT"));
+        let reports = matchers.validate(&request);
+        assert_eq!(
+            reports,
+            Some(vec![
+                Report {
+                    expected: path("/other/path"),
+                    actual: path("/some/path"),
+                },
+                Report {
+                    expected: method("PUT"),
+                    actual: method("post"),
+                }
+            ]),
+            "After adding method matcher: should report all mismatches in insertion order"
         );
     }
 }
