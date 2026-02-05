@@ -21,7 +21,7 @@ pub enum Matcher {
 }
 
 impl Matcher {
-    pub fn validate(&self, request: &Request) -> Option<Matcher> {
+    pub fn mismatch(&self, request: &Request) -> Option<Matcher> {
         match self {
             // eq_ignore_ascii_case: ASCII-only case-insensitive string comparison (no allocations).
             Matcher::Method(expected) if !request.method.eq_ignore_ascii_case(expected) => {
@@ -89,7 +89,7 @@ impl Matcher {
 /// An ordered collection of matchers.
 ///
 /// Insertion order is preserved and used when generating reports.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Matchers {
     // Insertion order is preserved (used for deterministic reporting).
     inner: Vec<Matcher>,
@@ -99,8 +99,8 @@ pub struct Matchers {
 ///
 /// `expected` — original rule  
 /// `actual`   — value observed in the request
-#[derive(Debug, PartialEq)]
-pub struct Report {
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchReport {
     pub expected: Matcher,
     pub actual: Matcher,
 }
@@ -112,18 +112,18 @@ impl Matchers {
         }
     }
 
-    pub fn accepts(&self, request: &Request) -> bool {
+    pub fn matches(&self, request: &Request) -> bool {
         self.inner
             .iter()
-            .all(|matcher| matcher.validate(request).is_none())
+            .all(|matcher| matcher.mismatch(request).is_none())
     }
 
-    pub fn validate(&self, request: &Request) -> Option<Vec<Report>> {
-        let reports: Vec<Report> = self
+    pub fn mismatches(&self, request: &Request) -> Option<Vec<MatchReport>> {
+        let reports: Vec<MatchReport> = self
             .inner
             .iter()
             .filter_map(|matcher| {
-                matcher.validate(request).map(|actual| Report {
+                matcher.mismatch(request).map(|actual| MatchReport {
                     expected: matcher.clone(),
                     actual,
                 })
@@ -227,7 +227,7 @@ mod test {
         #[case] valid_matcher: Matcher,
         #[case] request: Request,
     ) {
-        let report = invalid_matcher.validate(&request);
+        let report = invalid_matcher.mismatch(&request);
         assert_eq!(
             report,
             Some(valid_matcher.clone()),
@@ -237,7 +237,7 @@ mod test {
             request
         );
 
-        let result = valid_matcher.validate(&request);
+        let result = valid_matcher.mismatch(&request);
         assert!(
             result.is_none(),
             "Valid matcher {:?} should pass validation (return None) for request: {}",
@@ -254,7 +254,7 @@ mod test {
         let req = Request::default().with_method(req_method);
 
         assert!(
-            matcher.validate(&req).is_none(),
+            matcher.mismatch(&req).is_none(),
             "Method matcher should be case-insensitive. Matcher: {:?}, request.method: {:?}",
             matcher,
             req.method
@@ -268,7 +268,7 @@ mod test {
         let req = Request::default().with_method(req_method);
 
         assert_eq!(
-            matcher.validate(&req),
+            matcher.mismatch(&req),
             Some(method(req_method)),
             "On mismatch, Method matcher should report actual request.method verbatim. Matcher: {:?}, request.method: {:?}",
             matcher,
@@ -298,13 +298,13 @@ mod test {
         };
 
         assert!(
-            matchers.accepts(&request),
+            matchers.matches(&request),
             "Matchers {:?} should successfully match request: {}",
             matchers.inner,
             request
         );
 
-        let result = matchers.validate(&request);
+        let result = matchers.mismatches(&request);
         assert!(
             result.is_none(),
             "Matchers {:?} should validate successfully (return None) for request: {}",
@@ -340,17 +340,17 @@ mod test {
         let actual = actual.to_vec();
 
         assert!(
-            !matchers.accepts(&request),
+            !matchers.matches(&request),
             "Matchers {:?} should NOT match request: {}",
             matchers.inner,
             request
         );
 
         let validated_actual: Vec<Matcher> = matchers
-            .validate(&request)
+            .mismatches(&request)
             .unwrap()
             .into_iter()
-            .map(|Report { actual, .. }| actual)
+            .map(|MatchReport { actual, .. }| actual)
             .collect();
         assert_eq!(
             validated_actual, actual,
@@ -365,7 +365,7 @@ mod test {
         let mut matchers = Matchers::default();
 
         // Case: no matchers -> no reports.
-        let reports = matchers.validate(&request);
+        let reports = matchers.mismatches(&request);
         assert!(
             reports.is_none(),
             "No matchers: validate should return None"
@@ -373,10 +373,10 @@ mod test {
 
         // Case: add path matcher -> one report (path mismatch).
         matchers.add(path("/other/path"));
-        let reports = matchers.validate(&request);
+        let reports = matchers.mismatches(&request);
         assert_eq!(
             reports,
-            Some(vec![Report {
+            Some(vec![MatchReport {
                 expected: path("/other/path"),
                 actual: path("/some/path"),
             }]),
@@ -385,15 +385,15 @@ mod test {
 
         // Case: add method matcher -> two reports (path mismatch first, then method mismatch).
         matchers.add(method("PUT"));
-        let reports = matchers.validate(&request);
+        let reports = matchers.mismatches(&request);
         assert_eq!(
             reports,
             Some(vec![
-                Report {
+                MatchReport {
                     expected: path("/other/path"),
                     actual: path("/some/path"),
                 },
-                Report {
+                MatchReport {
                     expected: method("PUT"),
                     actual: method("post"),
                 }
