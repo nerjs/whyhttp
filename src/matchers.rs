@@ -139,11 +139,8 @@ impl Matchers {
 }
 
 #[cfg(test)]
-mod test {
-    use super::Matcher::*;
+pub mod shortless_matchers_for_test {
     use super::*;
-    use rstest::rstest;
-
     // Helper functions for creating Matcher variants.
     // Solve two problems:
     // 1. Reduce verbosity in tests - use method("GET") instead of Matcher::Method("GET".into())
@@ -153,53 +150,61 @@ mod test {
     // #[case::method(method("POST"), method("GET"), ...)]  // instead of
     // #[case::method(Matcher::Method("POST".into()), Matcher::Method("GET".into()), ...)]
 
-    fn method(method: &str) -> Matcher {
+    pub fn method(method: &str) -> Matcher {
         Matcher::Method(method.into())
     }
 
-    fn path(path: &str) -> Matcher {
+    pub fn path(path: &str) -> Matcher {
         Matcher::Path(path.into())
     }
 
-    fn q_eq(key: &str, val: &str) -> Matcher {
+    pub fn q_eq(key: &str, val: &str) -> Matcher {
         Matcher::QueryEq(key.into(), val.into())
     }
 
-    fn q_ex(key: &str) -> Matcher {
+    pub fn q_ex(key: &str) -> Matcher {
         Matcher::QueryExists(key.into())
     }
 
-    fn q_miss(key: &str) -> Matcher {
+    pub fn q_miss(key: &str) -> Matcher {
         Matcher::QueryMiss(key.into())
     }
 
-    fn h_eq(key: &str, val: &str) -> Matcher {
+    pub fn h_eq(key: &str, val: &str) -> Matcher {
         Matcher::HeaderEq(key.into(), val.into())
     }
 
-    fn h_ex(key: &str) -> Matcher {
+    pub fn h_ex(key: &str) -> Matcher {
         Matcher::HeaderExists(key.into())
     }
 
-    fn h_miss(key: &str) -> Matcher {
+    pub fn h_miss(key: &str) -> Matcher {
         Matcher::HeaderMiss(key.into())
     }
 
-    fn f_eq(fragment: &str) -> Matcher {
+    pub fn f_eq(fragment: &str) -> Matcher {
         Matcher::FragmentEq(fragment.into())
     }
 
-    fn f_miss() -> Matcher {
+    pub fn f_miss() -> Matcher {
         Matcher::FragmentMiss
     }
 
-    fn b_eq(body: &str) -> Matcher {
+    pub fn b_eq(body: &str) -> Matcher {
         Matcher::BodyEq(body.into())
     }
 
-    fn b_miss() -> Matcher {
+    pub fn b_miss() -> Matcher {
         Matcher::BodyMiss
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Matcher::*;
+    use super::shortless_matchers_for_test::*;
+    use super::*;
+    use rstest::rstest;
 
     #[rstest]
     #[case::method(method("post"), method("GET"), Request::default())]

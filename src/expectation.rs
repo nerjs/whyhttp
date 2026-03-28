@@ -8,6 +8,7 @@ use crate::{
 // Response returned for any matched expectation.
 // Returned unconditionally; request validation never affects response.
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Response {
     pub status: u16,
     pub headers: HashMap<String, String>,
