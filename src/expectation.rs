@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     matchers::{MatchReport, Matcher, Matchers},
+    reports::{Report, ReportReason},
     request::Request,
 };
 
@@ -101,37 +102,39 @@ impl Expectation {
         self.response.clone()
     }
 
-    pub fn reports(&self) -> Option<Vec<ExpectationReport>> {
+    pub fn reports(&self) -> Option<Report> {
+        let request = self.routing.to_request();
         if self.calls.is_empty() {
-            return Some(vec![ExpectationReport::NoCall]);
+            return Some(Report {
+                request,
+                reasons: vec![ReportReason::NoCall],
+            });
         }
 
-        let mut reports: Vec<ExpectationReport> = vec![];
+        let mut reasons: Vec<ReportReason> = vec![];
 
         if let Some(times) = self.times
             && times as usize != self.calls.len()
         {
-            reports.push(ExpectationReport::MismatchTimes {
+            reasons.push(ReportReason::MismatchTimes {
                 expect: times,
                 actual: self.calls.len() as u16,
             });
         }
 
         for call in self.calls.iter().filter_map(|req| {
-            req.reports
-                .as_ref()
-                .map(|reports| ExpectationReport::Matcher {
-                    request: Box::new(req.request.clone()),
-                    reports: reports.clone(),
-                })
+            req.reports.as_ref().map(|reports| ReportReason::Matcher {
+                request: Box::new(req.request.clone()),
+                reports: reports.clone(),
+            })
         }) {
-            reports.push(call);
+            reasons.push(call);
         }
 
-        if reports.is_empty() {
+        if reasons.is_empty() {
             None
         } else {
-            Some(reports)
+            Some(Report { request, reasons })
         }
     }
 }
@@ -147,7 +150,13 @@ mod test {
             .reports()
             .expect("expected Some(NoCall)");
 
-        assert_eq!(reports, vec![ExpectationReport::NoCall]);
+        assert_eq!(
+            reports,
+            Report {
+                request: Request::default().with_path("*"),
+                reasons: vec![ReportReason::NoCall],
+            }
+        );
     }
 
     #[test]
@@ -183,10 +192,13 @@ mod test {
 
         assert_eq!(
             reports,
-            vec![ExpectationReport::MismatchTimes {
-                expect: 2,
-                actual: 1
-            }]
+            Report {
+                request: Request::default().with_path("*"),
+                reasons: vec![ReportReason::MismatchTimes {
+                    expect: 2,
+                    actual: 1,
+                }],
+            }
         );
     }
 
@@ -202,13 +214,16 @@ mod test {
 
         assert_eq!(
             reports,
-            Some(vec![ExpectationReport::Matcher {
-                request: Box::new(req),
-                reports: vec![MatchReport {
-                    expected: Matcher::Method("POST".to_string()),
-                    actual: Matcher::Method("GET".to_string())
-                }]
-            }])
+            Some(Report {
+                request: Request::default().with_path("*"),
+                reasons: vec![ReportReason::Matcher {
+                    request: Box::new(req),
+                    reports: vec![MatchReport {
+                        expected: Matcher::Method("POST".to_string()),
+                        actual: Matcher::Method("GET".to_string()),
+                    }],
+                }],
+            })
         );
     }
 
@@ -221,15 +236,15 @@ mod test {
         e.call(Request::default().with_method("GET")); // GET, and actual=1
 
         let reports = e.reports().expect("expected reports");
-        assert_eq!(reports.len(), 2, "reports={reports:?}");
+        assert_eq!(reports.reasons.len(), 2, "reports={reports:?}");
 
         // Current implementation pushes times mismatch first, then matcher reports.
         assert!(
-            matches!(reports[0], ExpectationReport::MismatchTimes { .. }),
+            matches!(reports.reasons[0], ReportReason::MismatchTimes { .. }),
             "expected MismatchTimes first, got {reports:?}"
         );
         assert!(
-            matches!(reports[1], ExpectationReport::Matcher { .. }),
+            matches!(reports.reasons[1], ReportReason::Matcher { .. }),
             "expected Matcher second, got {reports:?}"
         );
     }
@@ -270,8 +285,9 @@ mod test {
         let reports = e.reports().expect("expected reports");
         assert!(
             reports
+                .reasons
                 .iter()
-                .any(|r| matches!(r, ExpectationReport::Matcher { .. })),
+                .any(|r| matches!(r, ReportReason::Matcher { .. })),
             "expected Matcher report, got {reports:?}"
         );
     }

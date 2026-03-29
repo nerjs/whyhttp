@@ -136,6 +136,32 @@ impl Matchers {
             Some(reports)
         }
     }
+
+    pub fn to_request(&self) -> Request {
+        let mut request = Request::default().with_path("*");
+        for matcher in self.inner.iter() {
+            match matcher {
+                Matcher::Method(method) => request.set_method(method),
+                Matcher::Path(path) => request.set_path(path),
+                Matcher::QueryEq(key, value) => request.set_query(key, Some(value)),
+                Matcher::QueryExists(key) => {
+                    if !request.query.contains_key(key) {
+                        request.set_query(key, None::<String>);
+                    }
+                }
+                Matcher::FragmentEq(fragment) => request.set_fragment(fragment),
+                Matcher::HeaderEq(key, value) => request.set_header(key, value),
+                Matcher::HeaderExists(key) => {
+                    if !request.headers.contains_key(key) {
+                        request.set_header(key, "*");
+                    }
+                }
+                Matcher::BodyEq(body) => request.set_body(body),
+                _ => {}
+            }
+        }
+        request
+    }
 }
 
 #[cfg(test)]

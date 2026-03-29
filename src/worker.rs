@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{
     expectation::{Expectation, Response},
     matchers::Matcher,
+    reports::{Report, ReportReason},
     request::Request,
 };
 
@@ -13,6 +14,7 @@ pub struct ExpectationId(u16);
 pub struct Worker {
     next_id: u16,
     expectations: HashMap<ExpectationId, Expectation>,
+    no_setuped_calls: Vec<Request>,
 }
 
 impl Worker {
@@ -20,6 +22,7 @@ impl Worker {
         Self {
             next_id: 0,
             expectations: HashMap::new(),
+            no_setuped_calls: Vec::new(),
         }
     }
 
@@ -85,14 +88,46 @@ impl Worker {
                 return expectation.call(request);
             }
         }
+        self.no_setuped_calls.push(request);
         Response::default()
+    }
+
+    pub fn single_report(&self, id: &ExpectationId) -> Option<Report> {
+        self.expectations.get(id)?.reports()
+    }
+
+    pub fn reports(&self) -> Option<Vec<Report>> {
+        let mut reports: Vec<Report> = Vec::new();
+
+        for id in 0..self.next_id {
+            let Some(report) = self.single_report(&ExpectationId(id)) else {
+                continue;
+            };
+            reports.push(report);
+        }
+
+        for request in self.no_setuped_calls.iter() {
+            reports.push(Report {
+                request: request.clone(),
+                reasons: vec![ReportReason::NoSetuped],
+            });
+        }
+
+        if reports.is_empty() {
+            None
+        } else {
+            Some(reports)
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::matchers::shortless_matchers_for_test::*;
+    use crate::{
+        matchers::{MatchReport, shortless_matchers_for_test::*},
+        request,
+    };
     use rstest::rstest;
 
     #[test]
@@ -377,5 +412,208 @@ mod test {
 
         let response = worker.handle(Request::default().with_method("post"));
         assert_eq!(response.status, 301);
+    }
+
+    #[test]
+    fn reports_none_when_no_expectations_and_no_calls() {
+        let worker = Worker::new();
+        let reports = worker.reports();
+
+        assert_eq!(reports, None);
+    }
+
+    #[test]
+    fn reports_no_setuped_for_unmatched_request() {
+        let mut worker = Worker::new();
+
+        let request1 = Request::default().with_path("/path/one");
+        let request2 = Request::default().with_path("/path/two");
+
+        let _ = worker.handle(request1.clone());
+        let _ = worker.handle(request2.clone());
+        let reports = worker.reports();
+
+        assert_eq!(
+            reports,
+            Some(vec![
+                Report {
+                    request: request1,
+                    reasons: vec![ReportReason::NoSetuped]
+                },
+                Report {
+                    request: request2,
+                    reasons: vec![ReportReason::NoSetuped]
+                }
+            ])
+        )
+    }
+
+    #[test]
+    fn reports_no_call_for_never_called_expectation() {
+        let mut worker = Worker::new();
+
+        let id = worker.create_next();
+        worker.add_routing(&id, Matcher::Path("/some".to_string()));
+
+        let reports = worker.reports();
+        assert_eq!(
+            reports,
+            Some(vec![Report {
+                request: Request::default().with_path("/some"),
+                reasons: vec![ReportReason::NoCall]
+            }])
+        );
+    }
+
+    #[test]
+    fn reports_none_for_successful_expectation() {
+        let mut worker = Worker::new();
+
+        let id = worker.create_next();
+        worker.add_routing(&id, Matcher::Path("/some".to_string()));
+        worker.add_validating(&id, Matcher::Method("PUT".to_string()));
+
+        let _ = worker.handle(Request::default().with_path("/some").with_method("PUT"));
+
+        let reports = worker.reports();
+
+        assert_eq!(reports, None);
+    }
+
+    #[test]
+    fn reports_mismatch_times() {
+        let mut worker = Worker::new();
+
+        let id = worker.create_next();
+        worker.add_routing(&id, Matcher::Path("/some".to_string()));
+        worker.set_times(&id, 2);
+
+        let request = Request::default().with_path("/some");
+        let _ = worker.handle(request.clone());
+
+        let reports = worker.reports();
+
+        assert_eq!(
+            reports,
+            Some(vec![Report {
+                request,
+                reasons: vec![ReportReason::MismatchTimes {
+                    expect: 2,
+                    actual: 1
+                }]
+            }])
+        );
+    }
+
+    #[test]
+    fn reports_none_when_times_match_expected_calls() {
+        let mut worker = Worker::new();
+
+        let id = worker.create_next();
+        worker.add_routing(&id, Matcher::Path("/some".to_string()));
+        worker.set_times(&id, 2);
+
+        let _ = worker.handle(Request::default().with_path("/some"));
+        let _ = worker.handle(Request::default().with_path("/some"));
+
+        let reports = worker.reports();
+
+        assert_eq!(reports, None);
+    }
+
+    #[test]
+    fn reports_matcher_reason_when_validation_fails() {
+        let mut worker = Worker::new();
+
+        let id = worker.create_next();
+        worker.add_routing(&id, Matcher::Path("/some".to_string()));
+        worker.add_validating(&id, Matcher::Method("PUT".to_string()));
+
+        let request = Request::default().with_path("/some");
+        let _ = worker.handle(request.clone().with_method("POST"));
+
+        let reports = worker.reports();
+
+        assert_eq!(
+            reports,
+            Some(vec![Report {
+                request: request.clone(),
+                reasons: vec![ReportReason::Matcher {
+                    request: Box::new(request.with_method("POST")),
+                    reports: vec![MatchReport {
+                        expected: Matcher::Method("PUT".to_string()),
+                        actual: Matcher::Method("POST".to_string())
+                    }]
+                }]
+            }])
+        );
+    }
+
+    #[test]
+    fn reports_combines_expectation_issues_and_no_setuped_calls() {
+        let mut worker = Worker::new();
+
+        let id = worker.create_next();
+        worker.add_routing(&id, Matcher::Path("/some".to_string()));
+        worker.add_validating(&id, Matcher::Method("PUT".to_string()));
+
+        let request1 = Request::default().with_path("/some");
+        let _ = worker.handle(request1.clone().with_method("POST"));
+        let request2 = Request::default().with_path("/some/other");
+        let _ = worker.handle(request2.clone());
+
+        let reports = worker.reports();
+
+        assert_eq!(
+            reports,
+            Some(vec![
+                Report {
+                    request: request1.clone(),
+                    reasons: vec![ReportReason::Matcher {
+                        request: Box::new(request1.with_method("POST")),
+                        reports: vec![MatchReport {
+                            expected: Matcher::Method("PUT".to_string()),
+                            actual: Matcher::Method("POST".to_string())
+                        }]
+                    }]
+                },
+                Report {
+                    request: request2,
+                    reasons: vec![ReportReason::NoSetuped]
+                }
+            ])
+        );
+    }
+
+    #[test]
+    fn reports_skip_removed_expectations() {
+        let mut worker = Worker::new();
+
+        let id = worker.create_next();
+        worker.add_routing(&id, Matcher::Path("/some".to_string()));
+        worker.remove(&id);
+
+        let reports = worker.reports();
+        assert_eq!(reports, None);
+    }
+
+    #[test]
+    fn single_report_returns_report_for_specific_expectation() {
+        let mut worker = Worker::new();
+
+        let id = worker.create_next();
+        worker.add_routing(&id, Matcher::Path("/some".to_string()));
+
+        let second_id = worker.create_next();
+        worker.add_routing(&second_id, Matcher::Path("/some/other".to_string()));
+
+        let report = worker.single_report(&second_id);
+        assert_eq!(
+            report,
+            Some(Report {
+                request: Request::default().with_path("/some/other"),
+                reasons: vec![ReportReason::NoCall]
+            })
+        )
     }
 }
