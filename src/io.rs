@@ -10,8 +10,6 @@ pub struct Request {
     pub method: String,
     pub path: String,
     pub query: HashMap<String, Option<String>>,
-    // FIXME: fragment is not part of real HTTP requests.
-    pub fragment: Option<String>,
     pub headers: HashMap<String, String>,
     pub body: Option<String>,
 }
@@ -23,10 +21,6 @@ impl Request {
 
     pub fn set_method<S: Into<String>>(&mut self, method: S) {
         self.method = method.into();
-    }
-
-    pub fn set_fragment<S: Into<String>>(&mut self, fragment: S) {
-        self.fragment = Some(fragment.into());
     }
 
     pub fn set_body<S: Into<String>>(&mut self, body: S) {
@@ -48,11 +42,6 @@ impl Request {
 
     pub fn with_method<S: Into<String>>(mut self, method: S) -> Self {
         self.set_method(method);
-        self
-    }
-
-    pub fn with_fragment<S: Into<String>>(mut self, fragment: S) -> Self {
-        self.set_fragment(fragment);
         self
     }
 
@@ -82,7 +71,6 @@ impl Default for Request {
             method: String::from("GET"),
             path: String::from("/"),
             query: Default::default(),
-            fragment: Default::default(),
             headers: Default::default(),
             body: Default::default(),
         }
@@ -97,12 +85,11 @@ fn split_str_by<'a>(input: &'a str, delimiter: &str) -> (&'a str, Option<&'a str
 }
 
 impl From<&str> for Request {
-    fn from(value: &str) -> Self {
-        let (path, fragment) = split_str_by(value.trim().trim_start_matches("/"), "#");
+    fn from(path: &str) -> Self {
         let (path, query) = split_str_by(path, "?");
+
         let mut request = Self {
-            path: format!("/{path}"),
-            fragment: fragment.map(String::from),
+            path: format!("/{}", path.trim_start_matches("/")),
             ..Default::default()
         };
 
@@ -156,10 +143,6 @@ impl std::fmt::Display for Request {
                 .collect::<Vec<String>>()
                 .join("&");
             f.write_str(&query)?;
-        }
-
-        if let Some(fragment) = &self.fragment {
-            f.write_str(&format!("#{fragment}"))?;
         }
 
         if !self.headers.is_empty() {
@@ -235,7 +218,6 @@ mod test {
     #[case("/", Request::default())]
     #[case("/some/path", Request { path: "/some/path".into(), ..Default::default() })]
     #[case("/path?key=value", Request { path: "/path".into(), query: [("key".into(), Some("value".into()))].into(), ..Default::default() })]
-    #[case("/path?key=value#some-hash", Request { path: "/path".into(), query: [("key".into(), Some("value".into()))].into(), fragment: Some("some-hash".into()), ..Default::default() })]
     #[case("?key=value&empty_key", Request { query: [("key".into(), Some("value".into())), ("empty_key".into(), None)].into(), ..Default::default() })]
     fn from_str(#[case] uri: &str, #[case] request: Request) {
         assert_eq!(

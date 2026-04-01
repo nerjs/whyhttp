@@ -237,7 +237,7 @@ mod test {
                 reasons
             }])
             if request.path == "/some/path"
-                && matches!(reasons.as_slice(), [ReportReason::NoSetuped])
+                && matches!(reasons.as_slice(), [ReportReason::NotSetup])
         ));
     }
 }

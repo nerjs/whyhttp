@@ -18,7 +18,7 @@ pub struct ExpectationId(u16);
 pub struct Worker {
     next_id: u16,
     expectations: HashMap<ExpectationId, Expectation>,
-    no_setuped_calls: Vec<Request>,
+    unmatched_calls: Vec<Request>,
 }
 
 impl Worker {
@@ -89,7 +89,7 @@ impl Worker {
                 return expectation.call(request);
             }
         }
-        self.no_setuped_calls.push(request);
+        self.unmatched_calls.push(request);
         Response::default()
     }
 
@@ -109,10 +109,10 @@ impl Worker {
             reports.push(report);
         }
 
-        for request in self.no_setuped_calls.iter() {
+        for request in self.unmatched_calls.iter() {
             reports.push(Report {
                 request: request.clone(),
-                reasons: vec![ReportReason::NoSetuped],
+                reasons: vec![ReportReason::NotSetup],
             });
         }
 
@@ -127,7 +127,7 @@ impl Worker {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::matchers::{MatchReport, shortless_matchers_for_test::*};
+    use crate::matchers::{MatchReport, test_helpers::*};
     use rstest::rstest;
 
     #[test]
@@ -225,8 +225,6 @@ mod test {
     #[case::header_eq(h_eq("key", "val"), vec![h_ex("key2"), h_miss("key"), h_eq("key", "val2")], Request::default().with_header("key", "val"))]
     #[case::header_ex(h_ex("key"), vec![h_ex("key2"), h_miss("key"), h_eq("key2", "val2")], Request::default().with_header("key", "val"))]
     #[case::header_miss(h_miss("key"), vec![h_ex("key"), h_miss("key2"), h_eq("key", "val")], Request::default().with_header("key2", "val"))]
-    #[case::fragment_eq(f_eq("val"), vec![f_miss(), f_eq("val2")], Request::default().with_fragment("val"))]
-    #[case::fragment_miss(f_miss(), vec![f_eq("val")], Request::default())]
     #[case::body_eq(b_eq("some body"), vec![b_miss(), b_eq("some other body")], Request::default().with_body("some body"))]
     #[case::body_miss(b_miss(), vec![b_eq("some body")], Request::default())]
     fn routes_request_to_matching_expectation(
@@ -438,11 +436,11 @@ mod test {
             Some(vec![
                 Report {
                     request: request1,
-                    reasons: vec![ReportReason::NoSetuped]
+                    reasons: vec![ReportReason::NotSetup]
                 },
                 Report {
                     request: request2,
-                    reasons: vec![ReportReason::NoSetuped]
+                    reasons: vec![ReportReason::NotSetup]
                 }
             ])
         )
@@ -579,7 +577,7 @@ mod test {
                 },
                 Report {
                     request: request2,
-                    reasons: vec![ReportReason::NoSetuped]
+                    reasons: vec![ReportReason::NotSetup]
                 }
             ])
         );

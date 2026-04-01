@@ -1,7 +1,7 @@
-pub mod expectation;
+mod expectation;
 mod io;
-pub mod matchers;
+mod matchers;
 mod print;
-pub mod reports;
+mod reports;
 pub mod server;
 pub mod worker;
