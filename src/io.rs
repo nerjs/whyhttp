@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    io::{Cursor, Read},
-};
+use std::{collections::HashMap, io::Cursor};
 
 /// A normalized HTTP-like request used inside whyhttp.
 ///
@@ -142,10 +139,10 @@ impl TryFrom<&mut tiny_http::Request> for Request {
 
 impl std::fmt::Display for Request {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("[{} {}", self.method.to_uppercase(), self.path));
+        f.write_str(&format!("[{} {}", self.method.to_uppercase(), self.path))?;
 
         if !self.query.is_empty() {
-            f.write_str("?");
+            f.write_str("?")?;
             let query = self
                 .query
                 .iter()
@@ -158,15 +155,15 @@ impl std::fmt::Display for Request {
                 })
                 .collect::<Vec<String>>()
                 .join("&");
-            f.write_str(&query);
+            f.write_str(&query)?;
         }
 
         if let Some(fragment) = &self.fragment {
-            f.write_str(&format!("#{fragment}"));
+            f.write_str(&format!("#{fragment}"))?;
         }
 
         if !self.headers.is_empty() {
-            f.write_str(" | with headers {");
+            f.write_str(" | with headers {")?;
 
             let headers = self
                 .headers
@@ -174,16 +171,16 @@ impl std::fmt::Display for Request {
                 .map(|(k, v)| format!("{k:?} = {v:?}"))
                 .collect::<Vec<String>>()
                 .join(", ");
-            f.write_str(&headers);
+            f.write_str(&headers)?;
 
-            f.write_str("}");
+            f.write_str("}")?;
         }
 
         if let Some(body) = &self.body {
-            f.write_str(&format!(" | with body {body:?}"));
+            f.write_str(&format!(" | with body {body:?}"))?;
         }
 
-        f.write_str("]");
+        f.write_str("]")?;
 
         Ok(())
     }

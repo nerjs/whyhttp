@@ -227,7 +227,6 @@ pub mod shortless_matchers_for_test {
 
 #[cfg(test)]
 mod test {
-    use super::Matcher::*;
     use super::shortless_matchers_for_test::*;
     use super::*;
     use rstest::rstest;

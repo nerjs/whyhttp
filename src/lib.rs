@@ -1,4 +1,3 @@
-#![allow(unused)]
 pub mod expectation;
 mod io;
 pub mod matchers;

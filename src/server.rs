@@ -32,7 +32,7 @@ pub fn run_server(shared_worker: Arc<Mutex<Worker>>) -> (Sender<()>, SocketAddr)
             }
 
             match server.try_recv() {
-                Ok(Some(mut req)) => handle(shared_worker.clone(), req),
+                Ok(Some(req)) => handle(shared_worker.clone(), req),
                 Ok(None) => thread::sleep(Duration::from_millis(5)),
                 Err(_) => break,
             }
@@ -60,7 +60,6 @@ mod test {
     use crate::{
         matchers::Matcher,
         reports::{Report, ReportReason},
-        worker,
     };
     use reqwest::Client;
     use std::net::TcpStream;
@@ -70,7 +69,6 @@ mod test {
         let worker = Arc::new(Mutex::new(Worker::default()));
         let (shutdown, addr) = run_server(worker);
 
-        let connected = TcpStream::connect_timeout(&addr, Duration::from_millis(10));
         assert!(TcpStream::connect_timeout(&addr, Duration::from_millis(50)).is_ok());
 
         let _ = shutdown.send(());
@@ -82,7 +80,7 @@ mod test {
     #[tokio::test]
     async fn async_responds_with_default_response_when_no_expectations_match() {
         let worker = Arc::new(Mutex::new(Worker::default()));
-        let (shutdown, addr) = run_server(worker);
+        let (_shutdown, addr) = run_server(worker);
         let url = format!("http://{addr}");
 
         let response = reqwest::get(url).await.unwrap();
@@ -93,7 +91,7 @@ mod test {
     #[test]
     fn blocking_responds_with_default_response_when_no_expectations_match() {
         let worker = Arc::new(Mutex::new(Worker::default()));
-        let (shutdown, addr) = run_server(worker);
+        let (_shutdown, addr) = run_server(worker);
         let url = format!("http://{addr}");
 
         let response = reqwest::blocking::get(url).unwrap();
@@ -108,7 +106,7 @@ mod test {
         worker.add_routing(&id, Matcher::Path("/some/path".to_string()));
         worker.set_response_status(&id, 205);
 
-        let (shutdown, addr) = run_server(Arc::new(Mutex::new(worker)));
+        let (_shutdown, addr) = run_server(Arc::new(Mutex::new(worker)));
 
         let url = format!("http://{addr}/some/path");
         let response = reqwest::get(url).await.unwrap();
@@ -222,7 +220,7 @@ mod test {
 
     #[tokio::test]
     async fn records_unmatched_runtime_request_in_reports() {
-        let mut worker = Worker::default();
+        let worker = Worker::default();
         let shared_worker = Arc::new(Mutex::new(worker));
         let (_shutdown, addr) = run_server(shared_worker.clone());
 

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     io::{Request, Response},
     matchers::{MatchReport, Matcher, Matchers},
