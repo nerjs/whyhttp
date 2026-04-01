@@ -1,16 +1,20 @@
 use std::collections::HashMap;
 
 use crate::{
-    expectation::{Expectation, Response},
+    expectation::Expectation,
+    io::{Request, Response},
     matchers::Matcher,
     reports::{Report, ReportReason},
-    request::Request,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ExpectationId(u16);
 
-#[derive(Debug)]
+/// The central expectation registry and request dispatcher.
+///
+/// Stores expectations, routes incoming requests, returns configured responses
+/// and produces aggregated reports after execution.
+#[derive(Debug, Default)]
 pub struct Worker {
     next_id: u16,
     expectations: HashMap<ExpectationId, Expectation>,
@@ -18,14 +22,7 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new() -> Self {
-        Self {
-            next_id: 0,
-            expectations: HashMap::new(),
-            no_setuped_calls: Vec::new(),
-        }
-    }
-
+    /// Creates and registers a new empty expectation.
     pub fn create_next(&mut self) -> ExpectationId {
         let id = ExpectationId(self.next_id);
         self.next_id += 1;
@@ -77,6 +74,10 @@ impl Worker {
         self.expectations.remove(id);
     }
 
+    /// Routes a request to the first matching expectation.
+    ///
+    /// Returns the matched response, or the default response when
+    /// no expectation matches the request.
     pub fn handle(&mut self, request: Request) -> Response {
         for id in 0..self.next_id {
             let id = ExpectationId(id);
@@ -92,10 +93,12 @@ impl Worker {
         Response::default()
     }
 
+    /// Returns a report for a specific expectation, if present.
     pub fn single_report(&self, id: &ExpectationId) -> Option<Report> {
         self.expectations.get(id)?.reports()
     }
 
+    /// Returns all collected reports, including unmatched incoming requests.
     pub fn reports(&self) -> Option<Vec<Report>> {
         let mut reports: Vec<Report> = Vec::new();
 
@@ -124,15 +127,12 @@ impl Worker {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        matchers::{MatchReport, shortless_matchers_for_test::*},
-        request,
-    };
+    use crate::matchers::{MatchReport, shortless_matchers_for_test::*};
     use rstest::rstest;
 
     #[test]
     fn increment_expectation_ids() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let first = worker.create_next();
         let second = worker.create_next();
@@ -144,7 +144,7 @@ mod test {
 
     #[test]
     fn handle_with_default_response_without_expectations() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let response = worker.handle(Request::default());
         assert_eq!(response, Response::default());
@@ -152,7 +152,7 @@ mod test {
 
     #[test]
     fn returns_configured_status_from_matched_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         let id = worker.create_next();
         worker.set_response_status(&id, 222);
 
@@ -162,7 +162,7 @@ mod test {
 
     #[test]
     fn returns_configured_header_from_matched_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         let id = worker.create_next();
         worker.set_response_header(&id, "some-key", "some-value");
 
@@ -173,7 +173,7 @@ mod test {
 
     #[test]
     fn returns_configured_body_from_matched_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         let id = worker.create_next();
         worker.set_response_body(&id, "some body text");
 
@@ -183,7 +183,7 @@ mod test {
 
     #[test]
     fn returns_full_configured_response_from_matched_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         let id = worker.create_next();
         worker.set_response_status(&id, 222);
         worker.set_response_header(&id, "some-key", "some-value");
@@ -201,7 +201,7 @@ mod test {
 
     #[test]
     fn returns_default_response_when_no_expectation_matches_request() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/first".to_string()));
@@ -234,7 +234,7 @@ mod test {
         #[case] incorrect_matchers: Vec<Matcher>,
         #[case] request: Request,
     ) {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let mut status_num = 600;
         for m in incorrect_matchers.into_iter() {
@@ -257,45 +257,45 @@ mod test {
     #[test]
     #[should_panic]
     fn panics_when_setting_times_for_unknown_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         worker.set_times(&ExpectationId(222), 2);
     }
 
     #[test]
     #[should_panic]
     fn panics_when_adding_routing_for_unknown_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         worker.add_routing(&ExpectationId(222), path("/"));
     }
     #[test]
     #[should_panic]
     fn panics_when_adding_validating_for_unknown_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         worker.add_validating(&ExpectationId(222), method("get"));
     }
 
     #[test]
     #[should_panic]
     fn panics_when_setting_response_status_for_unknown_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         worker.set_response_status(&ExpectationId(222), 222);
     }
     #[test]
     #[should_panic]
     fn panics_when_setting_response_header_for_unknown_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         worker.set_response_header(&ExpectationId(222), "key", "value");
     }
     #[test]
     #[should_panic]
     fn panics_when_setting_response_body_for_unknown_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
         worker.set_response_body(&ExpectationId(222), "");
     }
 
     #[test]
     fn first_matching_expectation_wins() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, path("/path"));
@@ -312,7 +312,7 @@ mod test {
 
     #[test]
     fn routes_request_to_matching_expectation_by_method_and_path() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         // This is the specific case that should be handled if both conditions are met
         let id = worker.create_next();
@@ -344,7 +344,7 @@ mod test {
 
     #[test]
     fn skips_removed_expectation_during_routing() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let skip_id = worker.create_next();
         worker.add_routing(&skip_id, Matcher::Path("/path".to_string()));
@@ -363,7 +363,7 @@ mod test {
 
     #[test]
     fn removing_nonexistent_expectation_does_not_affect_routing() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         // Should not cause errors
         worker.remove(&ExpectationId(222));
@@ -371,7 +371,7 @@ mod test {
 
     #[test]
     fn removing_same_expectation_twice_is_harmless() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = ExpectationId(222);
         worker.remove(&id);
@@ -381,7 +381,7 @@ mod test {
     #[test]
     #[should_panic]
     fn removing_existing_expectation_prevents_future_configuration() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.set_response_status(&id, 222);
@@ -392,7 +392,7 @@ mod test {
 
     #[test]
     fn allows_setting_times_without_affecting_response_handling() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.set_response_status(&id, 301);
@@ -404,7 +404,7 @@ mod test {
 
     #[test]
     fn validating_matchers_do_not_prevent_response_from_matched_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_validating(&id, Matcher::Method("put".to_string()));
@@ -416,7 +416,7 @@ mod test {
 
     #[test]
     fn reports_none_when_no_expectations_and_no_calls() {
-        let worker = Worker::new();
+        let worker = Worker::default();
         let reports = worker.reports();
 
         assert_eq!(reports, None);
@@ -424,7 +424,7 @@ mod test {
 
     #[test]
     fn reports_no_setuped_for_unmatched_request() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let request1 = Request::default().with_path("/path/one");
         let request2 = Request::default().with_path("/path/two");
@@ -450,7 +450,7 @@ mod test {
 
     #[test]
     fn reports_no_call_for_never_called_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/some".to_string()));
@@ -467,7 +467,7 @@ mod test {
 
     #[test]
     fn reports_none_for_successful_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/some".to_string()));
@@ -482,7 +482,7 @@ mod test {
 
     #[test]
     fn reports_mismatch_times() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/some".to_string()));
@@ -507,7 +507,7 @@ mod test {
 
     #[test]
     fn reports_none_when_times_match_expected_calls() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/some".to_string()));
@@ -523,7 +523,7 @@ mod test {
 
     #[test]
     fn reports_matcher_reason_when_validation_fails() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/some".to_string()));
@@ -551,7 +551,7 @@ mod test {
 
     #[test]
     fn reports_combines_expectation_issues_and_no_setuped_calls() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/some".to_string()));
@@ -587,7 +587,7 @@ mod test {
 
     #[test]
     fn reports_skip_removed_expectations() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/some".to_string()));
@@ -599,7 +599,7 @@ mod test {
 
     #[test]
     fn single_report_returns_report_for_specific_expectation() {
-        let mut worker = Worker::new();
+        let mut worker = Worker::default();
 
         let id = worker.create_next();
         worker.add_routing(&id, Matcher::Path("/some".to_string()));

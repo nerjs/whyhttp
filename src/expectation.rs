@@ -1,32 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
+    io::{Request, Response},
     matchers::{MatchReport, Matcher, Matchers},
     reports::{Report, ReportReason},
-    request::Request,
 };
-
-// Response returned for any matched expectation.
-// Returned unconditionally; request validation never affects response.
-#[derive(Debug, Clone)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct Response {
-    pub status: u16,
-    pub headers: HashMap<String, String>,
-    pub body: Option<String>,
-}
-
-// Default response used when no explicit response is configured.
-// Chosen to be non-success by default to make misconfiguration visible.
-impl Default for Response {
-    fn default() -> Self {
-        Self {
-            status: 200,
-            headers: Default::default(),
-            body: Default::default(),
-        }
-    }
-}
 
 // Single routed call to this expectation.
 // Stored only for later validation and reporting.
@@ -55,8 +33,11 @@ pub enum ExpectationReport {
     },
 }
 
-// Request expectation with fixed response and deferred validation.
-// Always returns configured response; validation is performed separately.
+/// A single request expectation with routing, validation and a fixed response.
+///
+/// Routing matchers decide whether the expectation is selected.
+/// Validating matchers do not affect response handling and are used only
+/// for mismatch reporting after the call is recorded.
 #[derive(Debug, Default)]
 pub struct Expectation {
     routing: Matchers,
@@ -67,9 +48,11 @@ pub struct Expectation {
 }
 
 impl Expectation {
+    /// Sets the expected number of calls for this expectation.
     pub fn set_times(&mut self, times: u16) {
         self.times = Some(times);
     }
+    /// Adds a matcher used for request routing.
     pub fn add_routing(&mut self, matcher: Matcher) {
         self.routing.add(matcher);
     }
@@ -90,18 +73,23 @@ impl Expectation {
         self.response.body = Some(body.into());
     }
 
-    // Checks whether request matches routing matchers.
-    // Used by upper-level router to select expectation.
+    /// Returns `true` when the request matches all routing matchers.
     pub fn matches(&self, request: &Request) -> bool {
         self.routing.matches(request)
     }
 
+    /// Records a matched call and returns the configured response.
+    ///
+    /// Validation mismatches are stored for later reporting.
     pub fn call(&mut self, request: Request) -> Response {
         let reports = self.validating.mismatches(&request);
         self.calls.push(Call { request, reports });
         self.response.clone()
     }
 
+    /// Builds a report for this expectation, if any issues were detected.
+    ///
+    /// Returns `None` when the expectation has no reportable problems.
     pub fn reports(&self) -> Option<Report> {
         let request = self.routing.to_request();
         if self.calls.is_empty() {

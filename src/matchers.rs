@@ -1,4 +1,4 @@
-use crate::request::Request;
+use crate::io::Request;
 
 /// A single request matching rule.
 ///

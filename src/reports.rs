@@ -1,5 +1,6 @@
-use crate::{matchers::MatchReport, request::Request};
+use crate::{io::Request, matchers::MatchReport};
 
+/// A report describing problems related to a single expected or actual request.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Report {
@@ -10,7 +11,7 @@ pub struct Report {
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub enum ReportReason {
-    // запрос по неизвестному пути
+    // Request was received but no expectation was configured for it.
     NoSetuped,
 
     // Expectation was configured but never called.

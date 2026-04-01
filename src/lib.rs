@@ -1,6 +1,8 @@
 #![allow(unused)]
-mod expectation;
-mod matchers;
-mod reports;
-mod request;
-mod worker;
+pub mod expectation;
+mod io;
+pub mod matchers;
+mod print;
+pub mod reports;
+pub mod server;
+pub mod worker;

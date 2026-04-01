@@ -1,10 +1,19 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    io::{Cursor, Read},
+};
 
+/// A normalized HTTP-like request used inside whyhttp.
+///
+/// Stores request method, path, query, headers and optional body.
+/// Can be constructed manually, parsed from a string, or converted
+/// from an incoming `tiny_http::Request`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Request {
     pub method: String,
     pub path: String,
     pub query: HashMap<String, Option<String>>,
+    // FIXME: fragment is not part of real HTTP requests.
     pub fragment: Option<String>,
     pub headers: HashMap<String, String>,
     pub body: Option<String>,
@@ -89,6 +98,7 @@ fn split_str_by<'a>(input: &'a str, delimiter: &str) -> (&'a str, Option<&'a str
         .map(|(p, f)| (p, if f.is_empty() { None } else { Some(f) }))
         .unwrap_or((input, None))
 }
+
 impl From<&str> for Request {
     fn from(value: &str) -> Self {
         let (path, fragment) = split_str_by(value.trim().trim_start_matches("/"), "#");
@@ -108,6 +118,25 @@ impl From<&str> for Request {
         }
 
         request
+    }
+}
+
+impl TryFrom<&mut tiny_http::Request> for Request {
+    type Error = std::io::Error;
+
+    fn try_from(value: &mut tiny_http::Request) -> Result<Self, Self::Error> {
+        let mut request = Request::from(value.url()).with_method(value.method().to_string());
+        for header in value.headers() {
+            request.set_header(header.field.to_string(), header.value.to_string());
+        }
+        let mut body = String::new();
+        value.as_reader().read_to_string(&mut body)?;
+
+        if !body.is_empty() {
+            request.set_body(body);
+        }
+
+        Ok(request)
     }
 }
 
@@ -157,6 +186,46 @@ impl std::fmt::Display for Request {
         f.write_str("]");
 
         Ok(())
+    }
+}
+
+/// A mock HTTP response returned by matched expectations.
+///
+/// Contains status code, headers and optional body.
+/// Can be converted into `tiny_http::Response` for the runtime server.
+#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct Response {
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: Option<String>,
+}
+
+// Default response used when no explicit response is configured.
+// Chosen to be non-success by default to make misconfiguration visible.
+impl Default for Response {
+    fn default() -> Self {
+        Self {
+            status: 200,
+            headers: Default::default(),
+            body: Default::default(),
+        }
+    }
+}
+
+impl From<Response> for tiny_http::Response<Cursor<Vec<u8>>> {
+    fn from(value: Response) -> Self {
+        let mut response =
+            tiny_http::Response::from_data(value.body.unwrap_or_default().into_bytes())
+                .with_status_code(value.status);
+
+        for (key, val) in value.headers {
+            if let Ok(header) = tiny_http::Header::from_bytes(key, val) {
+                response = response.with_header(header);
+            }
+        }
+
+        response
     }
 }
 
