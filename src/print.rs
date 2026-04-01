@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! logln {
     ($indent:expr, $level:expr, $($arg:tt)*) => {{
         let indent = $indent;
@@ -6,3 +5,5 @@ macro_rules! logln {
         println!("{}[WHYHTTP {}]: {}", spaces, $level, format!($($arg)*));
     }};
 }
+
+pub(crate) use logln;

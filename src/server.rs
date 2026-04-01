@@ -10,7 +10,7 @@ use std::{
 
 use tiny_http::Server;
 
-use crate::{io::Request, logln, worker::Worker};
+use crate::{io::Request, print::logln, worker::Worker};
 
 /// Starts an HTTP server backed by the shared worker.
 ///

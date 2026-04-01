@@ -25,7 +25,7 @@ pub enum ReportReason {
     // Request matched routing but failed validating matchers.
     Matcher {
         // Request is boxed to avoid making the entire enum as large as Request.
-        // Without Box, all ExpectationReport variants would have the same (large) size.
+        // Without Box, all ReportReason variants would have the same (large) size.
         request: Box<Request>,
         reports: Vec<MatchReport>,
     },

@@ -181,8 +181,7 @@ pub struct Response {
     pub body: Option<String>,
 }
 
-// Default response used when no explicit response is configured.
-// Chosen to be non-success by default to make misconfiguration visible.
+// Default response returned when no explicit response is configured.
 impl Default for Response {
     fn default() -> Self {
         Self {

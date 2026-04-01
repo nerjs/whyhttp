@@ -3,7 +3,7 @@ use crate::io::Request;
 /// A single request matching rule.
 ///
 /// Represents an expectation about one request attribute
-/// (method, path, query, header, fragment or body).
+/// (method, path, query, header or body).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Matcher {
     Method(String),
@@ -82,8 +82,8 @@ pub struct Matchers {
 
 /// Describes a single mismatch.
 ///
-/// `expected` — original rule  
-/// `actual`   — value observed in the request
+/// `expected` - the original matcher rule
+/// `actual` - the value found in the request
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchReport {
     pub expected: Matcher,
@@ -295,7 +295,7 @@ mod test {
     #[case::path_body(&[b_eq("some body")], Request::default().with_body("some body"))]
     fn valid_matchers(#[case] inner: &[Matcher], #[case] request: Request) {
         let matchers = Matchers {
-            inner: inner.into_iter().map(|m| m.clone()).collect(),
+            inner: inner.to_vec(),
         };
 
         assert!(
