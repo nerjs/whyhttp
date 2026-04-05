@@ -117,7 +117,7 @@ impl Worker {
         for request in self.unmatched_calls.iter() {
             reports.push(Report {
                 request: request.clone(),
-                reasons: vec![ReportReason::NotSetup],
+                reasons: vec![ReportReason::UnmatchedRequest],
             });
         }
 
@@ -441,11 +441,11 @@ mod test {
             Some(vec![
                 Report {
                     request: request1,
-                    reasons: vec![ReportReason::NotSetup]
+                    reasons: vec![ReportReason::UnmatchedRequest]
                 },
                 Report {
                     request: request2,
-                    reasons: vec![ReportReason::NotSetup]
+                    reasons: vec![ReportReason::UnmatchedRequest]
                 }
             ])
         )
@@ -582,7 +582,7 @@ mod test {
                 },
                 Report {
                     request: request2,
-                    reasons: vec![ReportReason::NotSetup]
+                    reasons: vec![ReportReason::UnmatchedRequest]
                 }
             ])
         );

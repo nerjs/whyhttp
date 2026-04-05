@@ -238,7 +238,7 @@ mod test {
                 reasons
             }])
             if request.path == "/some/path"
-                && matches!(reasons.as_slice(), [ReportReason::NotSetup])
+                && matches!(reasons.as_slice(), [ReportReason::UnmatchedRequest])
         ));
     }
 }

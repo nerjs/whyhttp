@@ -11,8 +11,8 @@ pub struct Report {
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub enum ReportReason {
-    // Request was received but no expectation was configured for it.
-    NotSetup,
+    // Request arrived but no expectation matched it.
+    UnmatchedRequest,
 
     // Expectation was configured but never called.
     NoCall,

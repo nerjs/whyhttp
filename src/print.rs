@@ -13,7 +13,7 @@ pub fn print_report(Report { request, reasons }: Report) {
     logln!(1, "REPORT", "{request}");
     for reason in reasons {
         match reason {
-            ReportReason::NotSetup => logln!(2, "DETAILS", "unexpected request"),
+            ReportReason::UnmatchedRequest => logln!(2, "DETAILS", "unexpected request"),
             ReportReason::NoCall => logln!(2, "DETAILS", "never called"),
             ReportReason::MismatchTimes { expect, actual } => {
                 logln!(2, "DETAILS", "called {actual} time(s), expected {expect}");
