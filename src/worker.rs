@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
     expectation::Expectation,
@@ -20,6 +23,8 @@ pub struct Worker {
     expectations: HashMap<ExpectationId, Expectation>,
     unmatched_calls: Vec<Request>,
 }
+
+pub type SharedWorker = Arc<Mutex<Worker>>;
 
 impl Worker {
     /// Creates and registers a new empty expectation.

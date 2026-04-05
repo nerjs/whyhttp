@@ -1,23 +1,20 @@
 use std::{
     net::{SocketAddr, TcpListener},
-    sync::{
-        Arc, Mutex,
-        mpsc::{Sender, TryRecvError, channel},
-    },
+    sync::mpsc::{Sender, TryRecvError, channel},
     thread,
     time::Duration,
 };
 
 use tiny_http::Server;
 
-use crate::{io::Request, print::logln, worker::Worker};
+use crate::{io::Request, print::logln, worker::SharedWorker};
 
 /// Starts an HTTP server backed by the shared worker.
 ///
 /// Returns a shutdown sender and the bound socket address.
 /// The server runs in a dedicated thread and polls both incoming requests
 /// and the shutdown channel.
-pub fn run_server(shared_worker: Arc<Mutex<Worker>>) -> (Sender<()>, SocketAddr) {
+pub fn run_server(shared_worker: SharedWorker) -> (Sender<()>, SocketAddr) {
     let (shutdown_tx, shutdown_rx) = channel();
     let listener = TcpListener::bind(("0.0.0.0", 0)).unwrap();
     let addr = listener.local_addr().unwrap();
@@ -43,7 +40,7 @@ pub fn run_server(shared_worker: Arc<Mutex<Worker>>) -> (Sender<()>, SocketAddr)
     (shutdown_tx, addr)
 }
 
-fn handle(shared_worker: Arc<Mutex<Worker>>, mut incoming: tiny_http::Request) {
+fn handle(shared_worker: SharedWorker, mut incoming: tiny_http::Request) {
     let request = Request::try_from(&mut incoming).unwrap_or_default();
     logln!(1, "LOG", "Received request {}", incoming.url());
     let mut worker = shared_worker.lock().unwrap();
@@ -60,13 +57,17 @@ mod test {
     use crate::{
         matchers::Matcher,
         reports::{Report, ReportReason},
+        worker::Worker,
     };
     use reqwest::Client;
-    use std::net::TcpStream;
+    use std::{
+        net::TcpStream,
+        sync::{Arc, Mutex},
+    };
 
     #[test]
     fn starts_server_and_stops_on_shutdown_signal() {
-        let worker = Arc::new(Mutex::new(Worker::default()));
+        let worker = SharedWorker::default();
         let (shutdown, addr) = run_server(worker);
 
         assert!(TcpStream::connect_timeout(&addr, Duration::from_millis(50)).is_ok());
@@ -79,7 +80,7 @@ mod test {
 
     #[tokio::test]
     async fn async_responds_with_default_response_when_no_expectations_match() {
-        let worker = Arc::new(Mutex::new(Worker::default()));
+        let worker = SharedWorker::default();
         let (_shutdown, addr) = run_server(worker);
         let url = format!("http://{addr}");
 
@@ -90,7 +91,7 @@ mod test {
 
     #[test]
     fn blocking_responds_with_default_response_when_no_expectations_match() {
-        let worker = Arc::new(Mutex::new(Worker::default()));
+        let worker = SharedWorker::default();
         let (_shutdown, addr) = run_server(worker);
         let url = format!("http://{addr}");
 
