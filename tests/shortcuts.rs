@@ -14,7 +14,10 @@ fn client() -> Client {
 fn when_path() {
     let server = Whyhttp::run();
     server.when_path("/greet").response().status(200u16);
-    client().get(format!("{}/greet", server.url())).send().unwrap();
+    client()
+        .get(format!("{}/greet", server.url()))
+        .send()
+        .unwrap();
 }
 
 #[test]
@@ -238,9 +241,7 @@ fn response_header() {
     server.response_header("x-custom", "yes");
     let resp = client().get(server.url()).send().unwrap();
     assert_eq!(
-        resp.headers()
-            .get("x-custom")
-            .and_then(|v| v.to_str().ok()),
+        resp.headers().get("x-custom").and_then(|v| v.to_str().ok()),
         Some("yes")
     );
 }

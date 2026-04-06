@@ -14,7 +14,12 @@ fn client() -> Client {
 fn should_path() {
     let server = Whyhttp::run();
     // no routing matchers → matches all; should validates path
-    server.when().should().path("/api").response().status(200u16);
+    server
+        .when()
+        .should()
+        .path("/api")
+        .response()
+        .status(200u16);
 
     client()
         .get(format!("{}/api", server.url()))
@@ -25,7 +30,12 @@ fn should_path() {
 #[test]
 fn should_method() {
     let server = Whyhttp::run();
-    server.when().should().method("GET").response().status(200u16);
+    server
+        .when()
+        .should()
+        .method("GET")
+        .response()
+        .status(200u16);
 
     client().get(server.url()).send().unwrap();
 }
@@ -133,11 +143,7 @@ fn should_body() {
         .status(200u16);
 
     // POST is used only because reqwest requires a body-capable method; the method does not affect routing or validation.
-    client()
-        .post(server.url())
-        .body("payload")
-        .send()
-        .unwrap();
+    client().post(server.url()).body("payload").send().unwrap();
 }
 
 #[test]

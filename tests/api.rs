@@ -133,15 +133,9 @@ fn chain_via_should_when() {
         .response()
         .status(201u16);
 
-    let r1 = client()
-        .get(format!("{}/a", server.url()))
-        .send()
-        .unwrap();
+    let r1 = client().get(format!("{}/a", server.url())).send().unwrap();
     assert_eq!(r1.status().as_u16(), 200);
 
-    let r2 = client()
-        .post(format!("{}/b", server.url()))
-        .send()
-        .unwrap();
+    let r2 = client().post(format!("{}/b", server.url())).send().unwrap();
     assert_eq!(r2.status().as_u16(), 201);
 }

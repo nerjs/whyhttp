@@ -13,7 +13,10 @@ fn route_by_path() {
     let server = Whyhttp::run();
     server.when().path("/hello").response().status(201u16);
 
-    let resp = client().get(format!("{}/hello", server.url())).send().unwrap();
+    let resp = client()
+        .get(format!("{}/hello", server.url()))
+        .send()
+        .unwrap();
     assert_eq!(resp.status().as_u16(), 201);
 }
 
@@ -52,7 +55,11 @@ fn route_by_query() {
 fn route_by_query_exists() {
     // matches when query parameter is present (any value)
     let server = Whyhttp::run();
-    server.when().query_exists("token").response().status(201u16);
+    server
+        .when()
+        .query_exists("token")
+        .response()
+        .status(201u16);
 
     let resp = client()
         .get(format!("{}/?token=abc", server.url()))
@@ -65,7 +72,11 @@ fn route_by_query_exists() {
 fn route_by_without_query() {
     // matches when query parameter is absent
     let server = Whyhttp::run();
-    server.when().without_query("debug").response().status(201u16);
+    server
+        .when()
+        .without_query("debug")
+        .response()
+        .status(201u16);
 
     let resp = client().get(server.url()).send().unwrap();
     assert_eq!(resp.status().as_u16(), 201);
@@ -187,5 +198,8 @@ fn first_match_wins() {
     assert_eq!(resp.status().as_u16(), 200);
 
     // satisfy the catch-all expectation with a different path
-    client().get(format!("{}/other", server.url())).send().unwrap();
+    client()
+        .get(format!("{}/other", server.url()))
+        .send()
+        .unwrap();
 }

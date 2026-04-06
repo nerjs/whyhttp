@@ -4,12 +4,12 @@
 //! This is the primary way the library fails tests automatically.
 //! Tests use `catch_unwind(AssertUnwindSafe(...))` to verify these panics.
 
+use reqwest::blocking::Client;
 use std::panic::AssertUnwindSafe;
 use std::sync::{
     Arc,
     atomic::{AtomicU16, Ordering},
 };
-use reqwest::blocking::Client;
 use whyhttp::Whyhttp;
 
 /// Assert that the closure causes a panic (i.e. the server found violations on drop).
@@ -81,6 +81,25 @@ fn mismatch_times_panics() {
             .send()
             .unwrap();
         // called once instead of twice
+    });
+}
+
+#[test]
+fn mismatch_times_over_call_panics() {
+    // times(N) also panics when the expectation is called more times than expected.
+    must_panic(|| {
+        let server = Whyhttp::run();
+        server
+            .when()
+            .path("/api")
+            .should()
+            .times(1u16)
+            .response()
+            .status(200u16);
+        let client = Client::new();
+        client.get(format!("{}/api", server.url())).send().unwrap();
+        client.get(format!("{}/api", server.url())).send().unwrap();
+        // called twice instead of once
     });
 }
 

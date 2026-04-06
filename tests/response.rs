@@ -34,9 +34,7 @@ fn response_status() {
 #[test]
 fn response_header() {
     let server = Whyhttp::run();
-    server
-        .response()
-        .header("content-type", "application/json");
+    server.response().header("content-type", "application/json");
 
     let resp = client().get(server.url()).send().unwrap();
     let ct = resp
