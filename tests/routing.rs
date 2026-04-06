@@ -1,5 +1,4 @@
-//! Integration tests for routing (when) matchers.
-//! Each test shows one `when()` condition used to select an expectation.
+//! Integration tests for `when()` routing matchers.
 
 use reqwest::blocking::Client;
 use whyhttp::Whyhttp;
@@ -53,7 +52,6 @@ fn route_by_query() {
 
 #[test]
 fn route_by_query_exists() {
-    // matches when query parameter is present (any value)
     let server = Whyhttp::run();
     server
         .when()
@@ -70,7 +68,6 @@ fn route_by_query_exists() {
 
 #[test]
 fn route_by_without_query() {
-    // matches when query parameter is absent
     let server = Whyhttp::run();
     server
         .when()
@@ -101,7 +98,6 @@ fn route_by_header() {
 
 #[test]
 fn route_by_header_exists() {
-    // matches when header is present (any value)
     let server = Whyhttp::run();
     server
         .when()
@@ -119,7 +115,6 @@ fn route_by_header_exists() {
 
 #[test]
 fn route_by_without_header() {
-    // matches when header is absent
     let server = Whyhttp::run();
     server
         .when()
@@ -150,7 +145,6 @@ fn route_by_body() {
 
 #[test]
 fn route_by_without_body() {
-    // matches when request body is empty
     let server = Whyhttp::run();
     server.when().without_body().response().status(201u16);
 
@@ -186,7 +180,6 @@ fn route_by_combined_matchers() {
 
 #[test]
 fn first_match_wins() {
-    // the first expectation whose matchers all pass handles the request
     let server = Whyhttp::run();
     server.when().path("/item").response().status(200u16); // wins for /item
     server.when().response().status(500u16); // catch-all, lower priority

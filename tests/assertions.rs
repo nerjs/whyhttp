@@ -35,7 +35,7 @@ fn no_call_panics() {
 
 #[test]
 fn unmatched_request_panics() {
-    // A request that no expectation matches is recorded as an error and causes a panic on drop.
+    // Requests with no matching expectation are recorded as errors and cause a panic on drop.
     must_panic(|| {
         let server = Whyhttp::run();
         // no expectations registered — every request is unmatched
@@ -65,8 +65,7 @@ fn unmatched_request_returns_default_200() {
 
 #[test]
 fn mismatch_times_panics() {
-    // times(N) asserts the expectation is called exactly N times.
-    // Here it is called fewer times than expected, causing a panic on drop.
+    // times(N) panics when triggered fewer times than expected.
     must_panic(|| {
         let server = Whyhttp::run();
         server
@@ -86,7 +85,7 @@ fn mismatch_times_panics() {
 
 #[test]
 fn mismatch_times_over_call_panics() {
-    // times(N) also panics when the expectation is called more times than expected.
+    // times(N) panics when triggered more times than expected.
     must_panic(|| {
         let server = Whyhttp::run();
         server
@@ -156,12 +155,11 @@ fn matcher_failure_still_returns_response() {
 
 #[test]
 fn clean_drop_no_panic() {
-    // All expectations fulfilled → server drops cleanly without panicking.
+    // All expectations met → clean drop.
     let server = Whyhttp::run();
     server.when().path("/ok").response().status(200u16);
     Client::new()
         .get(format!("{}/ok", server.url()))
         .send()
         .unwrap();
-    // drop here is clean
 }

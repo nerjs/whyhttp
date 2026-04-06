@@ -10,7 +10,6 @@ fn client() -> Client {
 
 #[test]
 fn default_response_is_200_empty_body() {
-    // without explicit configuration the server returns 200 with no body
     let server = Whyhttp::run();
     server.response(); // registers a catch-all expectation with default config
 

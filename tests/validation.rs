@@ -142,7 +142,7 @@ fn should_body() {
         .response()
         .status(200u16);
 
-    // POST is used only because reqwest requires a body-capable method; the method does not affect routing or validation.
+    // POST is needed to send a body; the method itself is not under test.
     client().post(server.url()).body("payload").send().unwrap();
 }
 
@@ -161,7 +161,6 @@ fn should_without_body() {
 
 #[test]
 fn should_times_exact() {
-    // expectation must be called exactly N times
     let server = Whyhttp::run();
     server
         .when()

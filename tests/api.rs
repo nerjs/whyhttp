@@ -62,7 +62,6 @@ fn addr_accessible_from_all_builder_stages() {
 #[test]
 fn whyhttp_should_shorthand() {
     // Whyhttp::should() is shorthand for when().should()
-    // Creates an expectation with no routing matchers
     let server = Whyhttp::run();
     server
         .should()
