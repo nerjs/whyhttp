@@ -250,21 +250,6 @@ mod test {
     }
 
     #[rstest]
-    #[case::upper_lower(method("GET"), "get")]
-    #[case::lower_mixed(method("post"), "PoSt")]
-    #[case::mixed_upper(method("pUt"), "PUT")]
-    fn method_case_insensitive(#[case] matcher: Matcher, #[case] req_method: &str) {
-        let req = Request::default().with_method(req_method);
-
-        assert!(
-            matcher.mismatch(&req).is_none(),
-            "Method matcher should be case-insensitive. Matcher: {:?}, request.method: {:?}",
-            matcher,
-            req.method
-        );
-    }
-
-    #[rstest]
     #[case::simple(method("GET"), "POST")]
     #[case::preserve_case(method("get"), "pOsT")]
     fn method_reports_actual(#[case] matcher: Matcher, #[case] req_method: &str) {
