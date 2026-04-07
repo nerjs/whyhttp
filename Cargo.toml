@@ -2,6 +2,12 @@
 name = "whyhttp"
 version = "0.1.0"
 edition = "2024"
+description = "HTTP mock server for use in tests. Starts a real server, expectations configured via fluent builder API, verified automatically on drop."
+license = "MIT"
+repository = "https://github.com/nerjs/whyhttp"
+readme = "README.md"
+keywords = ["http", "mock", "test", "server", "testing"]
+categories = ["development-tools::testing", "network-programming"]
 
 [dependencies]
 tiny_http = "0.12.0"
