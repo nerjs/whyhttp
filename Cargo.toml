@@ -8,6 +8,8 @@ repository = "https://github.com/nerjs/whyhttp"
 readme = "README.md"
 keywords = ["http", "mock", "test", "server", "testing"]
 categories = ["development-tools::testing", "network-programming"]
+include = ["src/**", "README.md", "LICENSE"]
+
 
 [dependencies]
 tiny_http = "0.12.0"
