@@ -21,12 +21,12 @@ jobs:
     steps:
       
       - name: Check out source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.PUBLISH_TOKEN }}
         
       - name: Cache Cargo bin directory
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cargo/bin
           key: cargo-bin-${{ runner.os }}
@@ -71,7 +71,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.bump-version.outputs.tag }}
           fetch-tags: true
