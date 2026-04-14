@@ -1,6 +1,6 @@
 [package]
 name = "whyhttp"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 description = "HTTP mock server for use in tests. Starts a real server, expectations configured via fluent builder API, verified automatically on drop."
 license = "MIT"
