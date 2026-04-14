@@ -14,12 +14,7 @@ fn client() -> Client {
 fn should_path() {
     let server = Whyhttp::run();
     // no routing matchers -> matches all; should validates path
-    server
-        .when()
-        .should()
-        .path("/api")
-        .response()
-        .status(200);
+    server.when().should().path("/api").response().status(200);
 
     client()
         .get(format!("{}/api", server.url()))
@@ -30,12 +25,7 @@ fn should_path() {
 #[test]
 fn should_method() {
     let server = Whyhttp::run();
-    server
-        .when()
-        .should()
-        .method("GET")
-        .response()
-        .status(200);
+    server.when().should().method("GET").response().status(200);
 
     client().get(server.url()).send().unwrap();
 }
@@ -149,12 +139,7 @@ fn should_body() {
 #[test]
 fn should_without_body() {
     let server = Whyhttp::run();
-    server
-        .when()
-        .should()
-        .without_body()
-        .response()
-        .status(200);
+    server.when().should().without_body().response().status(200);
 
     client().get(server.url()).send().unwrap();
 }

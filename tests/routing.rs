@@ -53,11 +53,7 @@ fn route_by_query() {
 #[test]
 fn route_by_query_exists() {
     let server = Whyhttp::run();
-    server
-        .when()
-        .query_exists("token")
-        .response()
-        .status(201);
+    server.when().query_exists("token").response().status(201);
 
     let resp = client()
         .get(format!("{}/?token=abc", server.url()))
@@ -69,11 +65,7 @@ fn route_by_query_exists() {
 #[test]
 fn route_by_without_query() {
     let server = Whyhttp::run();
-    server
-        .when()
-        .without_query("debug")
-        .response()
-        .status(201);
+    server.when().without_query("debug").response().status(201);
 
     let resp = client().get(server.url()).send().unwrap();
     assert_eq!(resp.status().as_u16(), 201);
@@ -129,11 +121,7 @@ fn route_by_without_header() {
 #[test]
 fn route_by_body() {
     let server = Whyhttp::run();
-    server
-        .when()
-        .body(r#"{"ok":true}"#)
-        .response()
-        .status(201);
+    server.when().body(r#"{"ok":true}"#).response().status(201);
 
     let resp = client()
         .post(server.url())

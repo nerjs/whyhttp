@@ -40,10 +40,7 @@ fn when_query() {
 #[test]
 fn when_query_exists() {
     let server = Whyhttp::run();
-    server
-        .when_query_exists("filter")
-        .response()
-        .status(200);
+    server.when_query_exists("filter").response().status(200);
     client()
         .get(format!("{}/?filter=active", server.url()))
         .send()
@@ -53,20 +50,14 @@ fn when_query_exists() {
 #[test]
 fn when_without_query() {
     let server = Whyhttp::run();
-    server
-        .when_without_query("debug")
-        .response()
-        .status(200);
+    server.when_without_query("debug").response().status(200);
     client().get(server.url()).send().unwrap();
 }
 
 #[test]
 fn when_header() {
     let server = Whyhttp::run();
-    server
-        .when_header("x-version", "2")
-        .response()
-        .status(200);
+    server.when_header("x-version", "2").response().status(200);
     client()
         .get(server.url())
         .header("x-version", "2")
@@ -144,10 +135,7 @@ fn should_query() {
 #[test]
 fn should_query_exists() {
     let server = Whyhttp::run();
-    server
-        .should_query_exists("page")
-        .response()
-        .status(200);
+    server.should_query_exists("page").response().status(200);
     client()
         .get(format!("{}/?page=1", server.url()))
         .send()

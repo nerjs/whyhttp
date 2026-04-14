@@ -516,10 +516,7 @@ impl ShouldWhyhttpRequest {
     /// server.when().path("/api").should().times(3).response().status(200);
     /// ```
     pub fn times(self, times: u16) -> Self {
-        self.inner
-            .lock()
-            .unwrap()
-            .set_times(&self.inner.id, times);
+        self.inner.lock().unwrap().set_times(&self.inner.id, times);
         self
     }
 }
