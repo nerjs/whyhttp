@@ -31,7 +31,7 @@ fn url_accessible_from_all_builder_stages() {
     let should = when.should();
     assert!(should.url().starts_with("http://"));
 
-    let resp_builder = should.response().status(200u16);
+    let resp_builder = should.response().status(200);
     assert!(resp_builder.url().starts_with("http://"));
 
     client()
@@ -50,7 +50,7 @@ fn addr_accessible_from_all_builder_stages() {
     let should = when.should();
     assert_ne!(should.addr().port(), 0);
 
-    let resp_builder = should.response().status(200u16);
+    let resp_builder = should.response().status(200);
     assert_ne!(resp_builder.addr().port(), 0);
 
     client()
@@ -67,7 +67,7 @@ fn whyhttp_should_shorthand() {
         .should()
         .header("x-token", "abc")
         .response()
-        .status(200u16);
+        .status(200);
 
     let resp = client()
         .get(server.url())
@@ -81,7 +81,7 @@ fn whyhttp_should_shorthand() {
 fn whyhttp_response_shorthand() {
     // Whyhttp::response() is shorthand for when().response()
     let server = Whyhttp::run();
-    server.response().status(204u16);
+    server.response().status(204);
 
     let resp = client().get(server.url()).send().unwrap();
     assert_eq!(resp.status().as_u16(), 204);
@@ -89,17 +89,17 @@ fn whyhttp_response_shorthand() {
 
 #[test]
 fn chain_via_response_when() {
-    // WhyhttpResponse::when() starts a new expectation — enables fluent multi-mock setup
+    // WhyhttpResponse::when() starts a new expectation: enables fluent multi-mock setup
     let server = Whyhttp::run();
     server
         .when()
         .path("/users")
         .response()
-        .status(200u16)
+        .status(200)
         .when()
         .path("/orders")
         .response()
-        .status(201u16);
+        .status(201);
 
     let r1 = client()
         .get(format!("{}/users", server.url()))
@@ -124,13 +124,13 @@ fn chain_via_should_when() {
         .should()
         .method("GET")
         .response()
-        .status(200u16)
+        .status(200)
         .when()
         .path("/b")
         .should()
         .method("POST")
         .response()
-        .status(201u16);
+        .status(201);
 
     let r1 = client().get(format!("{}/a", server.url())).send().unwrap();
     assert_eq!(r1.status().as_u16(), 200);

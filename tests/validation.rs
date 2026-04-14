@@ -1,5 +1,5 @@
 //! Integration tests for should() validating matchers.
-//! Validating matchers run after routing — they never block the response,
+//! Validating matchers run after routing: they never block the response,
 //! but failures are reported on drop. All tests here send requests that
 //! satisfy the should conditions, so the server drops cleanly.
 
@@ -13,13 +13,13 @@ fn client() -> Client {
 #[test]
 fn should_path() {
     let server = Whyhttp::run();
-    // no routing matchers → matches all; should validates path
+    // no routing matchers -> matches all; should validates path
     server
         .when()
         .should()
         .path("/api")
         .response()
-        .status(200u16);
+        .status(200);
 
     client()
         .get(format!("{}/api", server.url()))
@@ -35,7 +35,7 @@ fn should_method() {
         .should()
         .method("GET")
         .response()
-        .status(200u16);
+        .status(200);
 
     client().get(server.url()).send().unwrap();
 }
@@ -48,7 +48,7 @@ fn should_query() {
         .should()
         .query("page", "1")
         .response()
-        .status(200u16);
+        .status(200);
 
     client()
         .get(format!("{}/?page=1", server.url()))
@@ -64,7 +64,7 @@ fn should_query_exists() {
         .should()
         .query_exists("token")
         .response()
-        .status(200u16);
+        .status(200);
 
     client()
         .get(format!("{}/?token=xyz", server.url()))
@@ -80,7 +80,7 @@ fn should_without_query() {
         .should()
         .without_query("debug")
         .response()
-        .status(200u16);
+        .status(200);
 
     client().get(server.url()).send().unwrap();
 }
@@ -93,7 +93,7 @@ fn should_header() {
         .should()
         .header("x-token", "secret")
         .response()
-        .status(200u16);
+        .status(200);
 
     client()
         .get(server.url())
@@ -110,7 +110,7 @@ fn should_header_exists() {
         .should()
         .header_exists("x-token")
         .response()
-        .status(200u16);
+        .status(200);
 
     client()
         .get(server.url())
@@ -127,7 +127,7 @@ fn should_without_header() {
         .should()
         .without_header("x-internal")
         .response()
-        .status(200u16);
+        .status(200);
 
     client().get(server.url()).send().unwrap();
 }
@@ -140,7 +140,7 @@ fn should_body() {
         .should()
         .body("payload")
         .response()
-        .status(200u16);
+        .status(200);
 
     // POST is needed to send a body; the method itself is not under test.
     client().post(server.url()).body("payload").send().unwrap();
@@ -154,7 +154,7 @@ fn should_without_body() {
         .should()
         .without_body()
         .response()
-        .status(200u16);
+        .status(200);
 
     client().get(server.url()).send().unwrap();
 }
@@ -166,9 +166,9 @@ fn should_times_exact() {
         .when()
         .path("/ping")
         .should()
-        .times(2u16)
+        .times(2)
         .response()
-        .status(200u16);
+        .status(200);
 
     client()
         .get(format!("{}/ping", server.url()))
@@ -178,5 +178,5 @@ fn should_times_exact() {
         .get(format!("{}/ping", server.url()))
         .send()
         .unwrap();
-    // exactly 2 calls → clean drop
+    // exactly 2 calls -> clean drop
 }

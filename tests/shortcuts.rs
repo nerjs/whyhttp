@@ -7,12 +7,12 @@ fn client() -> Client {
     Client::new()
 }
 
-// ── when_* on Whyhttp ─────────────────────────────────────────────────────────
+// -- when_* on Whyhttp -----------------------------------------------------
 
 #[test]
 fn when_path() {
     let server = Whyhttp::run();
-    server.when_path("/greet").response().status(200u16);
+    server.when_path("/greet").response().status(200);
     client()
         .get(format!("{}/greet", server.url()))
         .send()
@@ -22,7 +22,7 @@ fn when_path() {
 #[test]
 fn when_method() {
     let server = Whyhttp::run();
-    server.when_method("DELETE").response().status(204u16);
+    server.when_method("DELETE").response().status(204);
     let resp = client().delete(server.url()).send().unwrap();
     assert_eq!(resp.status().as_u16(), 204);
 }
@@ -30,7 +30,7 @@ fn when_method() {
 #[test]
 fn when_query() {
     let server = Whyhttp::run();
-    server.when_query("sort", "asc").response().status(200u16);
+    server.when_query("sort", "asc").response().status(200);
     client()
         .get(format!("{}/?sort=asc", server.url()))
         .send()
@@ -40,7 +40,10 @@ fn when_query() {
 #[test]
 fn when_query_exists() {
     let server = Whyhttp::run();
-    server.when_query_exists("filter").response().status(200u16);
+    server
+        .when_query_exists("filter")
+        .response()
+        .status(200);
     client()
         .get(format!("{}/?filter=active", server.url()))
         .send()
@@ -50,7 +53,10 @@ fn when_query_exists() {
 #[test]
 fn when_without_query() {
     let server = Whyhttp::run();
-    server.when_without_query("debug").response().status(200u16);
+    server
+        .when_without_query("debug")
+        .response()
+        .status(200);
     client().get(server.url()).send().unwrap();
 }
 
@@ -60,7 +66,7 @@ fn when_header() {
     server
         .when_header("x-version", "2")
         .response()
-        .status(200u16);
+        .status(200);
     client()
         .get(server.url())
         .header("x-version", "2")
@@ -74,7 +80,7 @@ fn when_header_exists() {
     server
         .when_header_exists("x-request-id")
         .response()
-        .status(200u16);
+        .status(200);
     client()
         .get(server.url())
         .header("x-request-id", "123")
@@ -88,30 +94,30 @@ fn when_without_header() {
     server
         .when_without_header("x-internal")
         .response()
-        .status(200u16);
+        .status(200);
     client().get(server.url()).send().unwrap();
 }
 
 #[test]
 fn when_body() {
     let server = Whyhttp::run();
-    server.when_body("data").response().status(200u16);
+    server.when_body("data").response().status(200);
     client().post(server.url()).body("data").send().unwrap();
 }
 
 #[test]
 fn when_without_body() {
     let server = Whyhttp::run();
-    server.when_without_body().response().status(200u16);
+    server.when_without_body().response().status(200);
     client().get(server.url()).send().unwrap();
 }
 
-// ── should_* on Whyhttp ───────────────────────────────────────────────────────
+// -- should_* on Whyhttp ---------------------------------------------------
 
 #[test]
 fn should_path() {
     let server = Whyhttp::run();
-    server.should_path("/check").response().status(200u16);
+    server.should_path("/check").response().status(200);
     client()
         .get(format!("{}/check", server.url()))
         .send()
@@ -121,14 +127,14 @@ fn should_path() {
 #[test]
 fn should_method() {
     let server = Whyhttp::run();
-    server.should_method("GET").response().status(200u16);
+    server.should_method("GET").response().status(200);
     client().get(server.url()).send().unwrap();
 }
 
 #[test]
 fn should_query() {
     let server = Whyhttp::run();
-    server.should_query("q", "test").response().status(200u16);
+    server.should_query("q", "test").response().status(200);
     client()
         .get(format!("{}/?q=test", server.url()))
         .send()
@@ -138,7 +144,10 @@ fn should_query() {
 #[test]
 fn should_query_exists() {
     let server = Whyhttp::run();
-    server.should_query_exists("page").response().status(200u16);
+    server
+        .should_query_exists("page")
+        .response()
+        .status(200);
     client()
         .get(format!("{}/?page=1", server.url()))
         .send()
@@ -151,7 +160,7 @@ fn should_without_query() {
     server
         .should_without_query("internal")
         .response()
-        .status(200u16);
+        .status(200);
     client().get(server.url()).send().unwrap();
 }
 
@@ -161,7 +170,7 @@ fn should_header() {
     server
         .should_header("x-token", "abc")
         .response()
-        .status(200u16);
+        .status(200);
     client()
         .get(server.url())
         .header("x-token", "abc")
@@ -175,7 +184,7 @@ fn should_header_exists() {
     server
         .should_header_exists("authorization")
         .response()
-        .status(200u16);
+        .status(200);
     client()
         .get(server.url())
         .header("authorization", "Bearer x")
@@ -189,14 +198,14 @@ fn should_without_header() {
     server
         .should_without_header("x-debug")
         .response()
-        .status(200u16);
+        .status(200);
     client().get(server.url()).send().unwrap();
 }
 
 #[test]
 fn should_body() {
     let server = Whyhttp::run();
-    server.should_body("ping").response().status(200u16);
+    server.should_body("ping").response().status(200);
     // POST is needed to send a body; the method itself is not under test.
     client().post(server.url()).body("ping").send().unwrap();
 }
@@ -204,7 +213,7 @@ fn should_body() {
 #[test]
 fn should_without_body() {
     let server = Whyhttp::run();
-    server.should_without_body().response().status(200u16);
+    server.should_without_body().response().status(200);
     client().get(server.url()).send().unwrap();
 }
 
@@ -213,9 +222,9 @@ fn should_times() {
     let server = Whyhttp::run();
     server
         .when_path("/hit")
-        .should_times(3u16)
+        .should_times(3)
         .response()
-        .status(200u16);
+        .status(200);
     for _ in 0..3 {
         client()
             .get(format!("{}/hit", server.url()))
@@ -224,12 +233,12 @@ fn should_times() {
     }
 }
 
-// ── response_* on Whyhttp ─────────────────────────────────────────────────────
+// -- response_* on Whyhttp -------------------------------------------------
 
 #[test]
 fn response_status() {
     let server = Whyhttp::run();
-    server.response_status(418u16);
+    server.response_status(418);
     let resp = client().get(server.url()).send().unwrap();
     assert_eq!(resp.status().as_u16(), 418);
 }
@@ -253,7 +262,7 @@ fn response_body() {
     assert_eq!(resp.text().unwrap(), "pong");
 }
 
-// ── when_* / should_* / response_* on builder types ─────────────────────────
+// -- when_* / should_* / response_* on builder types -----------------------
 
 #[test]
 fn when_path_from_response_builder() {
@@ -262,10 +271,10 @@ fn when_path_from_response_builder() {
     server
         .when_path("/first")
         .response()
-        .status(200u16)
+        .status(200)
         .when_path("/second")
         .response()
-        .status(201u16);
+        .status(201);
 
     let r1 = client()
         .get(format!("{}/first", server.url()))
@@ -289,7 +298,7 @@ fn should_method_from_when_builder() {
         .path("/post-only")
         .should_method("POST")
         .response()
-        .status(200u16);
+        .status(200);
 
     client()
         .post(format!("{}/post-only", server.url()))
@@ -301,7 +310,7 @@ fn should_method_from_when_builder() {
 fn response_status_from_when_builder() {
     // response_status is available on WhenWhyhttpRequest
     let server = Whyhttp::run();
-    server.when().path("/created").response_status(201u16);
+    server.when().path("/created").response_status(201);
 
     let resp = client()
         .get(format!("{}/created", server.url()))
@@ -325,14 +334,14 @@ fn response_body_from_should_builder() {
 
 #[test]
 fn when_path_from_should_builder() {
-    // when_path available on ShouldWhyhttpRequest — starts a new expectation
+    // when_path available on ShouldWhyhttpRequest: starts a new expectation
     let server = Whyhttp::run();
     server
         .when_path("/a")
         .should()
-        .when_path("/b") // ← called on ShouldWhyhttpRequest
+        .when_path("/b") // called on ShouldWhyhttpRequest
         .response()
-        .status(201u16);
+        .status(201);
 
     client().get(format!("{}/a", server.url())).send().unwrap();
     client().get(format!("{}/b", server.url())).send().unwrap();

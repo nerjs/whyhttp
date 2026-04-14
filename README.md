@@ -11,7 +11,7 @@ let server = whyhttp::Whyhttp::run();
 server
     .when().path("/greet").method("GET")
     .should().header("x-token", "secret")
-    .response().status(200u16).body("hello");
+    .response().status(200).body("hello");
 
 let resp = reqwest::blocking::Client::new()
     .get(format!("{}/greet", server.url()))
@@ -19,7 +19,7 @@ let resp = reqwest::blocking::Client::new()
     .send()
     .unwrap();
 
-assert_eq!(resp.status(), 200u16);
+assert_eq!(resp.status().as_u16(), 200);
 assert_eq!(resp.text().unwrap(), "hello");
 ```
 
@@ -27,10 +27,10 @@ assert_eq!(resp.text().unwrap(), "hello");
 
 Every expectation has two independent sets of matchers:
 
-- **`when`** — *routing* matchers: select which expectation handles the request.
+- **`when`**: *routing* matchers: select which expectation handles the request.
   The first expectation whose matchers all pass wins.
-- **`should`** — *validating* matchers: run after routing. They never affect
-  which response is returned — failures appear in the drop report.
+- **`should`**: *validating* matchers: run after routing. They never affect
+  which response is returned - failures appear in the drop report.
 
 ```rust,no_run
 let server = whyhttp::Whyhttp::run();
@@ -39,13 +39,13 @@ let server = whyhttp::Whyhttp::run();
 server
     .when().path("/orders").method("POST")
     .should().body(r#"{"qty":1}"#)
-    .response().status(201u16);
+    .response().status(201);
 ```
 
 ## Drop behavior
 
 When `Whyhttp` is dropped, all collected issues are printed and the test panics
-if anything is wrong — so a failing mock automatically fails the test. Possible issues:
+if anything is wrong - so a failing mock automatically fails the test. Possible issues:
 
 | Report | Cause |
 |---|---|
@@ -58,7 +58,7 @@ if anything is wrong — so a failing mock automatically fails the test. Possibl
 
 Both `when` (routing) and `should` (validating) support the same set:
 
-| Method | Matches when… |
+| Method | Matches when... |
 |---|---|
 | `path(p)` | path equals `p` |
 | `method(m)` | HTTP method equals `m` (case-insensitive) |
@@ -77,5 +77,5 @@ Both `when` (routing) and `should` (validating) support the same set:
 let server = whyhttp::Whyhttp::run();
 
 // This endpoint must be called exactly twice.
-server.when().path("/api").should().times(2u16).response().status(200u16);
+server.when().path("/api").should().times(2).response().status(200);
 ```

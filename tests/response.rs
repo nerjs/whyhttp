@@ -21,7 +21,7 @@ fn default_response_is_200_empty_body() {
 #[test]
 fn response_status() {
     let server = Whyhttp::run();
-    server.when().path("/teapot").response().status(418u16);
+    server.when().path("/teapot").response().status(418);
 
     let resp = client()
         .get(format!("{}/teapot", server.url()))
@@ -83,7 +83,7 @@ fn response_full() {
         .when()
         .path("/data")
         .response()
-        .status(201u16)
+        .status(201)
         .header("content-type", "application/json")
         .body(r#"{"id":1}"#);
 

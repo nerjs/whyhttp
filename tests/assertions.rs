@@ -28,7 +28,7 @@ fn no_call_panics() {
     // An expectation that is configured but never triggered causes a panic on drop.
     must_panic(|| {
         let server = Whyhttp::run();
-        server.when().path("/api").response().status(200u16);
+        server.when().path("/api").response().status(200);
         // no request made
     });
 }
@@ -38,7 +38,7 @@ fn unmatched_request_panics() {
     // Requests with no matching expectation are recorded as errors and cause a panic on drop.
     must_panic(|| {
         let server = Whyhttp::run();
-        // no expectations registered — every request is unmatched
+        // no expectations registered: every request is unmatched
         Client::new().get(server.url()).send().unwrap();
     });
 }
@@ -72,9 +72,9 @@ fn mismatch_times_panics() {
             .when()
             .path("/api")
             .should()
-            .times(2u16)
+            .times(2)
             .response()
-            .status(200u16);
+            .status(200);
         Client::new()
             .get(format!("{}/api", server.url()))
             .send()
@@ -92,9 +92,9 @@ fn mismatch_times_over_call_panics() {
             .when()
             .path("/api")
             .should()
-            .times(1u16)
+            .times(1)
             .response()
-            .status(200u16);
+            .status(200);
         let client = Client::new();
         client.get(format!("{}/api", server.url())).send().unwrap();
         client.get(format!("{}/api", server.url())).send().unwrap();
@@ -114,8 +114,8 @@ fn matcher_failure_panics() {
             .should()
             .method("POST")
             .response()
-            .status(200u16);
-        // GET matches routing (path=/api) but fails should (method≠POST)
+            .status(200);
+        // GET matches routing (path=/api) but fails should (method != POST)
         Client::new()
             .get(format!("{}/api", server.url()))
             .send()
@@ -125,7 +125,7 @@ fn matcher_failure_panics() {
 
 #[test]
 fn matcher_failure_still_returns_response() {
-    // The should-matcher failure does not block the response — it is reported only on drop.
+    // The should-matcher failure does not block the response - it is reported only on drop.
     let status_code = Arc::new(AtomicU16::new(0));
     let status_clone = status_code.clone();
 
@@ -137,7 +137,7 @@ fn matcher_failure_still_returns_response() {
             .should()
             .method("POST")
             .response()
-            .status(200u16);
+            .status(200);
 
         let resp = Client::new()
             .get(format!("{}/api", server.url()))
@@ -155,9 +155,9 @@ fn matcher_failure_still_returns_response() {
 
 #[test]
 fn clean_drop_no_panic() {
-    // All expectations met → clean drop.
+    // All expectations met -> clean drop.
     let server = Whyhttp::run();
-    server.when().path("/ok").response().status(200u16);
+    server.when().path("/ok").response().status(200);
     Client::new()
         .get(format!("{}/ok", server.url()))
         .send()

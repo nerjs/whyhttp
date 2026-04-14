@@ -87,7 +87,7 @@ impl InnerGuard {
 /// then point your HTTP client at [`url`](Whyhttp::url).
 ///
 /// On drop, any unfulfilled or violated expectations are printed and the
-/// the test panics on drop — so a failing mock automatically fails the test.
+/// the test panics on drop - so a failing mock automatically fails the test.
 ///
 /// See the [crate-level documentation](crate) for a full example.
 pub struct Whyhttp {
@@ -110,7 +110,7 @@ pub struct WhenWhyhttpRequest {
 ///
 /// Obtained from [`WhenWhyhttpRequest::should`]. Validating matchers run
 /// after an expectation is selected by routing. They never affect which
-/// response is returned — failures are collected and reported on drop.
+/// response is returned - failures are collected and reported on drop.
 ///
 /// Use this to assert *how* a matched request looks (e.g. confirm a specific
 /// header is present) without affecting routing.
@@ -162,7 +162,7 @@ impl Whyhttp {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().path("/api").method("POST").response().status(201u16);
+    /// server.when().path("/api").method("POST").response().status(201);
     /// ```
     pub fn when(&self) -> WhenWhyhttpRequest {
         WhenWhyhttpRequest {
@@ -178,7 +178,7 @@ impl Whyhttp {
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
     /// // Assert every request carries this header, regardless of path.
-    /// server.should().header("x-request-id", "abc").response().status(200u16);
+    /// server.should().header("x-request-id", "abc").response().status(200);
     /// ```
     pub fn should(&self) -> ShouldWhyhttpRequest {
         self.when().should()
@@ -187,11 +187,11 @@ impl Whyhttp {
     /// Creates a new expectation and enters the response phase.
     ///
     /// Shorthand for `self.when().response()`. No routing or validating
-    /// matchers — the expectation matches every request.
+    /// matchers: the expectation matches every request.
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.response().status(503u16).body("unavailable");
+    /// server.response().status(503).body("unavailable");
     /// ```
     pub fn response(&self) -> WhyhttpResponse {
         self.when().response()
@@ -208,7 +208,7 @@ impl WhenWhyhttpRequest {
     /// let server = whyhttp::Whyhttp::run();
     /// server.when().path("/api")
     ///     .should().method("POST").header("content-type", "application/json")
-    ///     .response().status(200u16);
+    ///     .response().status(200);
     /// ```
     pub fn should(&self) -> ShouldWhyhttpRequest {
         ShouldWhyhttpRequest {
@@ -222,7 +222,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().path("/ping").response().status(200u16);
+    /// server.when().path("/ping").response().status(200);
     /// ```
     pub fn response(&self) -> WhyhttpResponse {
         self.should().response()
@@ -232,7 +232,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().path("/api/users").response().status(200u16);
+    /// server.when().path("/api/users").response().status(200);
     /// ```
     pub fn path<S: Into<String>>(self, path: S) -> Self {
         self.inner
@@ -247,7 +247,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().method("DELETE").response().status(204u16);
+    /// server.when().method("DELETE").response().status(204);
     /// ```
     pub fn method<S: Into<String>>(self, method: S) -> Self {
         self.inner
@@ -262,7 +262,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().query("page", "2").response().status(200u16);
+    /// server.when().query("page", "2").response().status(200);
     /// ```
     pub fn query<K: Into<String>, V: Into<String>>(self, key: K, value: V) -> Self {
         self.inner
@@ -277,7 +277,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().query_exists("token").response().status(200u16);
+    /// server.when().query_exists("token").response().status(200);
     /// ```
     pub fn query_exists<K: Into<String>>(self, key: K) -> Self {
         self.inner
@@ -292,7 +292,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().without_query("debug").response().status(200u16);
+    /// server.when().without_query("debug").response().status(200);
     /// ```
     pub fn without_query<K: Into<String>>(self, key: K) -> Self {
         self.inner
@@ -307,7 +307,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().header("accept", "application/json").response().status(200u16);
+    /// server.when().header("accept", "application/json").response().status(200);
     /// ```
     pub fn header<K: Into<String>, V: Into<String>>(self, key: K, value: V) -> Self {
         self.inner
@@ -322,7 +322,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().header_exists("authorization").response().status(200u16);
+    /// server.when().header_exists("authorization").response().status(200);
     /// ```
     pub fn header_exists<K: Into<String>>(self, key: K) -> Self {
         self.inner
@@ -337,7 +337,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().without_header("x-internal").response().status(200u16);
+    /// server.when().without_header("x-internal").response().status(200);
     /// ```
     pub fn without_header<K: Into<String>>(self, key: K) -> Self {
         self.inner
@@ -352,7 +352,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().body(r#"{"ok":true}"#).response().status(200u16);
+    /// server.when().body(r#"{"ok":true}"#).response().status(200);
     /// ```
     pub fn body<S: Into<String>>(self, body: S) -> Self {
         self.inner
@@ -367,7 +367,7 @@ impl WhenWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().without_body().response().status(400u16);
+    /// server.when().without_body().response().status(400);
     /// ```
     pub fn without_body(self) -> Self {
         self.inner
@@ -384,7 +384,7 @@ impl ShouldWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().path("/api").should().method("GET").response().status(200u16);
+    /// server.when().path("/api").should().method("GET").response().status(200);
     /// ```
     pub fn response(&self) -> WhyhttpResponse {
         WhyhttpResponse {
@@ -400,8 +400,8 @@ impl ShouldWhyhttpRequest {
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
     /// server
-    ///     .when().path("/a").should().method("GET").response().status(200u16)
-    ///     .when().path("/b").should().method("POST").response().status(201u16);
+    ///     .when().path("/a").should().method("GET").response().status(200)
+    ///     .when().path("/b").should().method("POST").response().status(201);
     /// ```
     pub fn when(&self) -> WhenWhyhttpRequest {
         self.response().when()
@@ -513,13 +513,13 @@ impl ShouldWhyhttpRequest {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().path("/api").should().times(3u16).response().status(200u16);
+    /// server.when().path("/api").should().times(3).response().status(200);
     /// ```
-    pub fn times<T: Into<u16>>(self, times: T) -> Self {
+    pub fn times(self, times: u16) -> Self {
         self.inner
             .lock()
             .unwrap()
-            .set_times(&self.inner.id, times.into());
+            .set_times(&self.inner.id, times);
         self
     }
 }
@@ -532,8 +532,8 @@ impl WhyhttpResponse {
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
     /// server
-    ///     .when().path("/a").response().status(200u16)
-    ///     .when().path("/b").response().status(201u16);
+    ///     .when().path("/a").response().status(200)
+    ///     .when().path("/b").response().status(201);
     /// ```
     pub fn when(&self) -> WhenWhyhttpRequest {
         WhenWhyhttpRequest {
@@ -545,13 +545,13 @@ impl WhyhttpResponse {
     ///
     /// ```no_run
     /// let server = whyhttp::Whyhttp::run();
-    /// server.when().path("/created").response().status(201u16);
+    /// server.when().path("/created").response().status(201);
     /// ```
-    pub fn status<N: Into<u16>>(self, status: N) -> Self {
+    pub fn status(self, status: u16) -> Self {
         self.inner
             .lock()
             .unwrap()
-            .set_response_status(&self.inner.id, status.into());
+            .set_response_status(&self.inner.id, status);
         self
     }
 
@@ -710,7 +710,7 @@ macro_rules! impl_helpers {
                 }
 
                 /// Shorthand for `self.should().times(times)`.
-                pub fn should_times<T: Into<u16>>(&self, times: T) -> ShouldWhyhttpRequest {
+                pub fn should_times(&self, times: u16) -> ShouldWhyhttpRequest {
                     self.should().times(times)
                 }
             }
@@ -720,7 +720,7 @@ macro_rules! impl_helpers {
         $(
             impl $base {
                 /// Shorthand for `self.response().status(status)`.
-                pub fn response_status<N: Into<u16>>(&self, status: N) -> WhyhttpResponse {
+                pub fn response_status(&self, status: u16) -> WhyhttpResponse {
                     self.response().status(status)
                 }
 
