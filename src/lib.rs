@@ -18,7 +18,7 @@ mod io;
 mod matchers;
 mod print;
 mod reports;
-pub mod server;
+mod server;
 mod worker;
 
 struct Inner {

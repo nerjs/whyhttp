@@ -75,10 +75,6 @@ impl Worker {
             .set_response_body(body);
     }
 
-    pub fn remove(&mut self, id: &ExpectationId) {
-        self.expectations.remove(id);
-    }
-
     /// Routes a request to the first matching expectation.
     ///
     /// Returns the matched response, or the default response when
@@ -126,6 +122,13 @@ impl Worker {
         } else {
             Some(reports)
         }
+    }
+}
+
+#[cfg(test)]
+impl Worker {
+    pub fn remove(&mut self, id: &ExpectationId) {
+        self.expectations.remove(id);
     }
 }
 
