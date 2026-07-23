@@ -1,0 +1,43 @@
+name: Bump version and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release action"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - beta
+          - beta-minor
+          - beta-major
+          - finalize
+        default: patch
+      commit_note:
+        description: "Optional text appended to commit message"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+
+  bump:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: voidmason/bump-release@v1
+        with:
+          # PAT: a push with GITHUB_TOKEN would not trigger CI or the dependencies sync on the bump commit.
+          token: ${{ secrets.RELEASE_TOKEN }}
+          version: ${{ inputs.version }}
+          commit_note: ${{ inputs.commit_note }}
