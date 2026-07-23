@@ -44,18 +44,12 @@ impl Request {
         self.set_method(method);
         self
     }
+}
 
+#[cfg(test)]
+impl Request {
     pub fn with_body<S: Into<String>>(mut self, body: S) -> Self {
         self.set_body(body);
-        self
-    }
-
-    pub fn with_query<K: Into<String>, V: Into<String>>(
-        mut self,
-        key: K,
-        value: Option<V>,
-    ) -> Self {
-        self.set_query(key, value);
         self
     }
 
