@@ -2,7 +2,7 @@
 name = "whyhttp"
 version = "1.0.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 description = "HTTP mock server for use in tests. Starts a real server, expectations configured via fluent builder API, verified automatically on drop."
 license = "MIT"
 repository = "https://github.com/nullmonger/whyhttp"
